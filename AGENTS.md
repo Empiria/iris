@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for coding agents working in this repository. `CLAUDE.md` is a symlink to this file.
+Guidance for coding agents working in this repository. `CLAUDE.md` is an untracked local symlink to this file. It is listed in the git exclude file (`git rev-parse --git-path info/exclude`) and `just setup` creates it. Never commit it.
 
 ## Project
 
@@ -16,13 +16,19 @@ Iris is an [Anvil](https://anvil.works) app: Python on both client and server, w
 - `client_code/services/routes.py`: route classes for the `routing` dependency.
 - `client_code/HelloWorld/`: placeholder home form (HTML template).
 - `server_code/`: server modules. Server-side packages go in `requirements.txt`.
+- `server_code/health.py`: provides the `ping` callable the local stack tests use.
 - `theme/`: `parameters.yaml` (colour scheme), `assets/theme.css` (design tokens and all styles), `templates.yaml` (empty: there are no theme page templates).
+- `tools/`: `anvil_deps.py` fetches the dependency apps with no login. `leftovers.py` is the starter-leftovers check. It also reads an optional untracked `.leftovers-local` file of extra regexes, one per line. `dev_seed.py` seeds the local stack.
+- `tests/`: `unit/` holds hermetic server-side tests, `e2e/` holds pytest-playwright tests against the live local stack. The two are never collected together.
+- `justfile`: the check, stack and test recipes (see Checks).
+- `Containerfile`: the local anvil-app-server image.
+- `pyproject.toml` and `uv.lock`: dev and test tooling only. The Anvil app does not use them.
 
-Dependencies (in `anvil.yaml`): `routing` v0.3.5. Nothing else. Add a dependency only when code needs it, and add it through the Anvil IDE (Settings → Dependencies), not by hand: `dep_id` values are generated per app and can't be copied between apps.
+Dependencies (in `anvil.yaml`): `routing` v0.7.0 and `anvil-reactive` v0.1.4 (repo `github.com/anvilistas/reactive`, package `anvil_reactive`, app id `N7KFE4YBWMGWJ5OX`). Nothing else. Add or bump a dependency only when code needs it, and do it through the Anvil IDE (Settings → Dependencies), not by hand: `dep_id` values are generated per app and can't be copied between apps. `tools/anvil_deps.py` reads the pinned tag from `anvil.yaml`, so an IDE bump is picked up on the next `just deps`.
 
 ## Remotes
 
-`production` is the live Anvil app. Never push to it. Work on branches, push to `origin`, and open PRs against `main`.
+There are no pull requests. Work is merged to `main`, and `main` is pushed to `origin` and to `production`. `production` is the live Anvil app, so agents never push to it. The lead does that.
 
 ## Runtime constraints
 
@@ -36,7 +42,7 @@ Dependencies (in `anvil.yaml`): `routing` v0.3.5. Nothing else. Add a dependency
 - Never write `from client_code.X` or `from server_code.X`. Neither is a real package, so the import always fails.
 - Client code can't import server modules. On the server, both trees are flattened into one namespace, so server modules can import client modules as siblings.
 - Inside `@anvil.server.server_method` bodies, import server-only modules within the method, using the absolute `from app.X` form.
-- Import dependency submodules by their full path, e.g. `from anvil_extras.logging import Logger`.
+- Import dependency submodules by their full path, e.g. `from anvil_reactive.main import signal`.
 
 ## Architecture rules
 
@@ -51,12 +57,12 @@ Dependencies (in `anvil.yaml`): `routing` v0.3.5. Nothing else. Add a dependency
   - Name tables in singular `snake_case`, and name each model class after its table in `PascalCase`.
 - Pass rows and model objects through callables, not dict copies, unless you've measured a serialisation problem.
 - Table schemas can live in `anvil.yaml` under `db_schema`. On anvil.works, pushing a schema change doesn't apply it: someone has to resolve it in the IDE, for each environment.
-- No global mutable state shared across forms. For new client state, use the anvilistas `reactive` library (`from anvil_reactive.main import signal, render_effect, bind`). Use exactly that import path, and don't trust context7 docs for this library. `reactive` (anvil-reactive, app id `N7KFE4YBWMGWJ5OX`) is a required dependency, but it hasn't been added yet: it's waiting to be added in the IDE. Don't hand-write its `anvil.yaml` entry.
+- No global mutable state shared across forms. For new client state, use the anvilistas `reactive` library (`from anvil_reactive.main import signal, render_effect, bind`). Use exactly that import path, and don't trust context7 docs for this library. `reactive` (anvil-reactive, app id `N7KFE4YBWMGWJ5OX`) is a dependency now.
 
 ## Routing and URLs
 
 - Navigate with the `routing` module (`from routing import router`). Don't call `open_form()` for navigation.
-- Routing-library path routes are client-side only. On a private-link dev origin, a cold visit to `/<path>` returns 404. Meeting links are always cold visits, so either serve them with `@anvil.server.route`, or point them at the app root with a query parameter and redirect on the client. Test a cold load on the real origin before relying on path routes. This was seen with a later routing version than the v0.3.5 pinned here.
+- Routing-library path routes are client-side only. On a private-link dev origin, a cold visit to `/<path>` returns 404. Meeting links are always cold visits, so either serve them with `@anvil.server.route`, or point them at the app root with a query parameter and redirect on the client. The 404 was seen on a private-link dev origin with a routing version later than v0.3.5. Re-test a cold load on the real origin with the pinned v0.7.0 before relying on path routes.
 - Write HTTP endpoints with `@anvil.server.route`. `@anvil.server.http_endpoint` is legacy, and it serves under `/_/api/`.
 - For `/.well-known/` paths, use `@anvil.server.wellknown_endpoint("/name")`, giving the path without the `/.well-known` prefix. `route` and `http_endpoint` return 404 there.
 
@@ -86,13 +92,21 @@ Iris builds its UI from HTML form templates and HTML components. **Don't use Mat
 
 ## Checks
 
-- After editing any Anvil file (`anvil.yaml`, form templates, `client_code/**/*.py`, `server_code/**/*.py`), run `anvil --json validate <path>` and fix any reported `issues`. Run `anvil validate .` before handing off.
-- `validate` needs the dependency cache, so run `anvil deps fetch` first. Without the cache it reports unresolved imports for `m3`, `routing` and `anvil_extras`.
-- Lint with ruff using Empiria's rule set:
-  `ruff check --select E,F,I001,SIM,C4,PERF,RET,UP,C90 <files>`
-  In `client_code/`, reject autofixes that bring in subscripted generics or `contextlib.suppress`: Skulpt can't run the generics, and `contextlib.suppress` is unverified there.
-- Type-check with `anvil-pyright`, not plain basedpyright.
-- `pytest` can't run `client_code/`. Pin server payload shapes in tests, and check client behaviour in a browser.
+- Run `just setup` once per clone or worktree. It is idempotent: it creates the `CLAUDE.md` link, the hooks and the tools, and never needs an Anvil login.
+- `just deps` fetches the dependency apps from their public GitHub repos at the tags pinned in `anvil.yaml` into the gitignored `.anvil/` directory. It needs no Anvil login and doesn't write to `.git/config`. `validate` and `check` run it for you.
+- `just stubs` is a note only: anvil-pyright bundles the Anvil stubs, so never wire in a `.stubs/` directory.
+- `just lint` runs ruff with Empiria's rule set from `.ruff.toml`. In `client_code/`, reject autofixes that bring in subscripted generics or `contextlib.suppress`: Skulpt can't run the generics, and `contextlib.suppress` is unverified there. `just format` formats.
+- `just check` type-checks with `anvil-pyright`, not plain basedpyright.
+- `just validate` runs `anvil validate .`.
+- `just leftovers` checks that nothing from the starter has come back. It also applies any extra patterns in the optional untracked `.leftovers-local` file. `just setup` lists that file in the git exclude file, and it is never committed.
+- `just verify` runs lint, check, validate and leftovers. It is the gate before handing off.
+- `just unit` runs the hermetic server-side tests.
+- After editing any Anvil file (`anvil.yaml`, form templates, `client_code/**/*.py`, `server_code/**/*.py`), run `anvil --json validate <path>` and fix any reported `issues`.
+- `pytest` can't run `client_code/`. Pin server payload shapes in unit tests, and check client behaviour in a browser.
+
+### Local stack and e2e tests
+
+`just build`, `just up`, `just down`, `just restart`, `just fresh`, `just logs`, `just seed` and `just e2e` need rootless podman and the live stack on port 3030. They are host-only: they can't run in a worker sandbox, where only `deps`, `lint`, `check`, `validate`, `leftovers`, `unit` and `verify` run. The app is served at `http://localhost:3030/`, and the dev uplink key `dev-uplink` is local-only. The unit and e2e suites are never collected in one pytest run (a conftest guard enforces it). The stack and e2e results are checked on the host and recorded by the final phase-1 plan.
 
 ## Reference docs
 
@@ -101,7 +115,6 @@ Use context7 for Anvil API questions:
 ```bash
 ctx7 docs /websites/anvil_works "<question>"
 ctx7 docs /anvil-works/routing "<question>"
-ctx7 docs /anvilistas/anvil-extras "<question>"
 ```
 
 The open-source runtime, https://github.com/anvil-works/anvil-runtime, is useful for internals. It lags production slightly.

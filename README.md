@@ -18,9 +18,14 @@ to run their own instance.
 The app depends on these Anvil apps. After you clone or import it into a new
 Anvil account, add them again through the editor's "Add Dependency" dialog:
 
-- Material 3 Theme (`m3`) v1.2.3
-- routing v0.3.5
-- Anvil Extras v3.1.0
+- routing v0.7.0
+- anvil-reactive v0.1.4 (repo `github.com/anvilistas/reactive`)
+
+## Local development
+
+`just setup`, `just deps`, `just verify` and `just unit` work anywhere you have
+`just`, `uv`, `ruff`, `anvil-cli` and `git`. The stack recipes (`just up`,
+`just seed`, `just e2e`) need podman.
 
 ## Working on the code
 
