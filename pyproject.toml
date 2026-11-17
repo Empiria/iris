@@ -1,0 +1,29 @@
+[project]
+name = "iris-dev"
+version = "0.0.0"
+description = "Dev and test tooling for Iris. The app itself is not a Python package."
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "anvil-uplink>=0.7.1",
+    "pytest>=9.2",
+    "pytest-playwright>=0.10",
+    # Exact pin: the sandbox has this release's chromium build cached, and a
+    # newer wheel would want a build that `playwright install` can't fetch there.
+    "playwright==1.65.2",
+    "pyyaml>=6.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+# No default test path, on purpose: run `just unit` or `just e2e`. A bare `pytest tests`
+# collects both suites, and tests/conftest.py refuses that.
+addopts = "-ra"
+base_url = "http://localhost:3030/"
+markers = [
+    "e2e: drives a browser against the local stack",
+]

@@ -3,3 +3,8 @@
 __pycache__
 .anvil-data
 /.anvil/
+.venv/
+.pytest_cache/
+.ruff_cache/
+# Iris uses the stubs bundled with anvil-pyright; this only stops stubs symlinks being committed by accident.
+.stubs/
