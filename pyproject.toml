@@ -22,7 +22,10 @@ package = false
 [tool.pytest.ini_options]
 # No default test path, on purpose: run `just unit` or `just e2e`. A bare `pytest tests`
 # collects both suites, and tests/conftest.py refuses that.
-addopts = "-ra"
+# --confcutdir=tests keeps the repo root out of the collection tree. The root holds
+# the Anvil app's __init__.py, which pytest would otherwise import as a package
+# and which fails outside the Anvil runtime (it reads __path__ without defining it).
+addopts = "-ra --confcutdir=tests"
 base_url = "http://localhost:3030/"
 markers = [
     "e2e: drives a browser against the local stack",
