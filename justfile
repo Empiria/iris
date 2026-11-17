@@ -11,6 +11,9 @@ uplink_url := env_var_or_default("IRIS_UPLINK_URL", "ws://localhost:3030/_/uplin
 # How many times the stack guard retries (2 s apart) before it gives up.
 stack_retries := env_var_or_default("IRIS_STACK_RETRIES", "30")
 
+# How long host-check waits for a booting stack to answer 200, in seconds.
+boot_timeout := env_var_or_default("IRIS_BOOT_TIMEOUT", "600")
+
 # The app's package_name (anvil.yaml). The app is mounted at /srv/<package>.
 package := "app"
 img := "iris-anvil-dev"
@@ -141,6 +144,146 @@ seed: _need-stack
 # Browser tests against the running stack (needs the stack up).
 e2e: _need-stack
     uv run pytest tests/e2e --base-url {{ base_url }}
+
+# [host] Run every host-only check in order, stop at the first failure, log to .anvil/host-check.txt, leave the stack up.
+host-check: (_need-podman "host-check")
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p .anvil
+    out="$PWD/.anvil/host-check.txt"
+    : > "$out"
+    exec > >(tee -a "$out") 2>&1
+    step=0
+    name="start"
+    begin() { step=$((step + 1)); name="$1"; echo; echo "== step $step: $name"; }
+    fail() { echo "host-check: $*" >&2; exit 1; }
+    trap 'rc=$?; [ "$rc" -eq 0 ] || { echo; echo "host-check: FAILED at step $step ($name), exit $rc. Log: $out"; }' EXIT
+    # Prints the seconds until the stack answers 200.
+    wait_200() {
+        local start=$SECONDS
+        until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 '{{ base_url }}' || true)" = 200 ]; do
+            [ $((SECONDS - start)) -lt {{ boot_timeout }} ] || fail "no 200 from {{ base_url }} after {{ boot_timeout }} s"
+            sleep 3
+        done
+        echo $((SECONDS - start))
+    }
+    echo "host-check: $(date -Is) at $(git rev-parse --short HEAD) on $(git branch --show-current)"
+
+    begin "podman"
+    podman_version="$(podman --version)"
+    echo "$podman_version"
+
+    begin "setup: CLAUDE.md link, exclude entries, pre-commit hook, Playwright chromium"
+    gitconfig="$(git rev-parse --git-common-dir)/config"
+    config_before="$(md5sum < "$gitconfig")"
+    just setup
+    exclude="$(git rev-parse --git-path info/exclude)"
+    for line in CLAUDE.md .leftovers-local; do
+        grep -qxF "$line" "$exclude" || fail "$line is not in $exclude"
+    done
+    [ "$(readlink CLAUDE.md)" = AGENTS.md ] || fail "CLAUDE.md is not a link to AGENTS.md"
+    git check-ignore -q CLAUDE.md || fail "git does not ignore CLAUDE.md"
+    grep -qs pre-commit "$(git rev-parse --git-path hooks/pre-commit)" || fail "the pre-commit hook is not installed"
+    uv run --quiet python -c 'import playwright.sync_api as a; p = a.sync_playwright().start(); p.chromium.launch().close(); p.stop()' \
+        || fail "Playwright chromium does not launch"
+    echo "setup checks passed"
+
+    begin "dependencies from GitHub with no Anvil login"
+    marker="$(mktemp)"
+    rm -rf .anvil/deps .anvil/src
+    just deps
+    [ "$(md5sum < "$gitconfig")" = "$config_before" ] || fail "$gitconfig changed"
+    if [ -d "$HOME/.config/anvil-cli" ] && [ -n "$(find "$HOME/.config/anvil-cli" -newer "$marker" -print -quit)" ]; then
+        fail "something wrote to ~/.config/anvil-cli"
+    fi
+    rm -f "$marker"
+    echo "shared git config unchanged, no anvil-cli login state written"
+
+    begin "build the image (A2)"
+    t0=$SECONDS
+    just build
+    build_secs=$((SECONDS - t0))
+    podman image exists {{ img }} || fail "image {{ img }} is missing"
+    echo "just build took ${build_secs} s"
+
+    begin "the runtime user finds the app-server JAR without a download (A3)"
+    jar="$(podman run --rm --entrypoint python3 {{ img }} -c 'import anvil_app_server as a; print(a.find_or_download_app_server())')"
+    echo "$jar"
+    [ "$(printf '%s\n' "$jar" | wc -l)" -eq 1 ] || fail "expected one line, the JAR path"
+    case "$jar" in *.jar) ;; *) fail "expected a path ending in .jar" ;; esac
+
+    begin "cold boot on a clean database (A7)"
+    just fresh
+    boot_secs="$(wait_200)"
+    echo "first 200 after ${boot_secs} s"
+
+    begin "the port is published on loopback only"
+    port="$(podman port {{ ctr }})"
+    echo "$port"
+    [ "$port" = "3030/tcp -> 127.0.0.1:3030" ] || fail "expected 3030/tcp -> 127.0.0.1:3030"
+    listen="$(ss -ltnH 'sport = :3030')"
+    echo "$listen"
+    if grep -qE '(0\.0\.0\.0|\[::\]|\*):3030' <<<"$listen"; then fail "port 3030 listens beyond loopback"; fi
+
+    begin "the server got the dependency ids from anvil.yaml"
+    cmd="$(podman inspect {{ ctr }} --format '{{{{json .Config.Cmd}}')"
+    echo "$cmd"
+    dep_args="$(uv run --script tools/anvil_deps.py --dep-id-args)"
+    [ -n "$dep_args" ] || fail "anvil_deps.py --dep-id-args printed nothing"
+    for arg in $dep_args; do
+        [ "$arg" = --dep-id ] && continue
+        grep -qF "\"$arg\"" <<<"$cmd" || fail "the server command lacks $arg"
+    done
+
+    begin "the server log has no import errors"
+    if podman logs {{ ctr }} 2>&1 | grep -iE 'traceback|cannot find dependenc|modulenotfound'; then
+        fail "errors in the server log (above)"
+    fi
+
+    begin "seed over the dev uplink, twice (QA-05)"
+    just seed
+    just seed
+
+    begin "browser test (QA-06, A4)"
+    just e2e
+
+    begin "lifecycle: down"
+    just down
+    if podman ps --format '{{{{.Names}}' | grep -qx {{ ctr }}; then fail "{{ ctr }} is still running"; fi
+    if curl -fsS -o /dev/null --max-time 3 '{{ base_url }}' 2>/dev/null; then fail "{{ base_url }} still answers"; fi
+    echo "stopped"
+
+    begin "lifecycle: up"
+    just up
+    secs="$(wait_200)"
+    echo "200 after ${secs} s"
+
+    begin "lifecycle: restart"
+    just restart
+    secs="$(wait_200)"
+    echo "200 after ${secs} s"
+
+    begin "lifecycle: logs"
+    rc=0
+    timeout -k 2 5 just logs > /dev/null || rc=$?
+    [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ] || fail "just logs exited $rc instead of following"
+    echo "just logs follows the log"
+
+    begin "lifecycle: fresh, then seed and e2e again"
+    just fresh
+    podman volume exists {{ vol }} || fail "volume {{ vol }} is missing"
+    secs="$(wait_200)"
+    echo "200 after ${secs} s"
+    just seed
+    just e2e
+
+    echo
+    echo "== summary"
+    echo "podman: $podman_version"
+    echo "just build: ${build_secs} s"
+    echo "cold boot to first 200: ${boot_secs} s"
+    echo "seed and e2e output: in the seed, browser test and fresh steps above"
+    echo "host-check: all steps passed. The stack is still running at {{ base_url }}."
 
 [private]
 _need-podman recipe:

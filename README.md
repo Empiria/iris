@@ -25,7 +25,9 @@ Anvil account, add them again through the editor's "Add Dependency" dialog:
 
 `just setup`, `just deps`, `just verify` and `just unit` work anywhere you have
 `just`, `uv`, `ruff`, `anvil-cli` and `git`. The stack recipes (`just up`,
-`just seed`, `just e2e`) need podman.
+`just seed`, `just e2e`) need podman. `just host-check` runs every podman-side
+check in order, stops at the first failure, writes its log to
+`.anvil/host-check.txt` and leaves the stack running.
 
 ## Working on the code
 

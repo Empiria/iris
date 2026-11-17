@@ -106,7 +106,7 @@ Iris builds its UI from HTML form templates and HTML components. **Don't use Mat
 
 ### Local stack and e2e tests
 
-`just build`, `just up`, `just down`, `just restart`, `just fresh`, `just logs`, `just seed` and `just e2e` need rootless podman and the live stack on port 3030. They are host-only: they can't run in a worker sandbox, where only `deps`, `lint`, `check`, `validate`, `leftovers`, `unit` and `verify` run. The app is served at `http://localhost:3030/`, and the dev uplink key `dev-uplink` is local-only. The unit and e2e suites are never collected in one pytest run (a conftest guard enforces it). The stack and e2e results are checked on the host and recorded by the final phase-1 plan.
+`just build`, `just up`, `just down`, `just restart`, `just fresh`, `just logs`, `just seed` and `just e2e` need rootless podman and the live stack on port 3030. They are host-only: they can't run in a worker sandbox, where only `deps`, `lint`, `check`, `validate`, `leftovers`, `unit` and `verify` run. The app is served at `http://localhost:3030/`, and the dev uplink key `dev-uplink` is local-only. The unit and e2e suites are never collected in one pytest run (a conftest guard enforces it). `just host-check` runs every host-only step in order: setup checks, `deps` with the shared-config check, `build`, a cold boot, the loopback and dependency-id checks, `seed`, `e2e` and the lifecycle recipes. It stops at the first failure, writes the log and a summary to `.anvil/host-check.txt`, and leaves the stack running. The stack and e2e results are checked on the host and recorded by the final phase-1 plan.
 
 ## Reference docs
 
