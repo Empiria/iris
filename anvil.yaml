@@ -1,4 +1,4 @@
-allow_embedding: true
+allow_embedding: false
 dependencies:
 - dep_id: dep_kdiw29fnbu4q
   resolution_hints: {app_id: 3PIDO5P3H4VPEMPL, name: routing, package_name: routing}
