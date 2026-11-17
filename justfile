@@ -50,6 +50,11 @@ setup:
     elif ! pre-commit install 2>/dev/null; then
         echo "setup: could not install the pre-commit hook here. On the host, run: pre-commit install"
     fi
+    # Build the hook environments now, so a commit made without network access can still run them.
+    if grep -qs pre-commit "$hook" && ! hook_err="$(pre-commit install-hooks 2>&1)"; then
+        printf '%s\n' "$hook_err" | tail -n 3
+        echo "setup: could not build the pre-commit hook environments here. On the host, run: pre-commit install-hooks"
+    fi
     uv sync --quiet
     if uv run --quiet python -c 'import playwright.sync_api as a; p = a.sync_playwright().start(); p.chromium.launch().close(); p.stop()' 2>/dev/null; then
         echo "setup: Playwright chromium is installed"
@@ -207,10 +212,12 @@ host-check: (_need-podman "host-check")
     echo "just build took ${build_secs} s"
 
     begin "the runtime user finds the app-server JAR without a download (A3)"
-    jar="$(podman run --rm --entrypoint python3 {{ img }} -c 'import anvil_app_server as a; print(a.find_or_download_app_server())')"
-    echo "$jar"
-    [ "$(printf '%s\n' "$jar" | wc -l)" -eq 1 ] || fail "expected one line, the JAR path"
-    case "$jar" in *.jar) ;; *) fail "expected a path ending in .jar" ;; esac
+    # The library prints its own "Found ..." or "Downloading ..." line before the path we print.
+    jar_out="$(podman run --rm --entrypoint python3 {{ img }} -c 'import anvil_app_server as a; print(a.find_or_download_app_server())' 2>&1)"
+    echo "$jar_out"
+    if printf '%s\n' "$jar_out" | grep -qi 'download'; then fail "the runtime user had to download the JAR"; fi
+    jar="$(printf '%s\n' "$jar_out" | tail -n 1)"
+    case "$jar" in *.jar) ;; *) fail "expected the last line to be a path ending in .jar" ;; esac
 
     begin "cold boot on a clean database (A7)"
     just fresh
