@@ -1,10 +1,10 @@
 color_scheme:
   colors:
-  - {name: Primary, color: '#1f5fbf'}
-  - {name: On Primary, color: '#ffffff'}
-  - {name: Background, color: '#f6f7f9'}
-  - {name: Surface, color: '#ffffff'}
-  - {name: On Surface, color: '#1b1d21'}
-  - {name: Muted, color: '#5c6370'}
-  - {name: Outline, color: '#d7dbe1'}
+  - {color: '#1f5fbf', name: Primary}
+  - {color: '#ffffff', name: On Primary}
+  - {color: '#f6f7f9', name: Background}
+  - {color: '#ffffff', name: Surface}
+  - {color: '#1b1d21', name: On Surface}
+  - {color: '#5c6370', name: Muted}
+  - {color: '#d7dbe1', name: Outline}
 roles: []
