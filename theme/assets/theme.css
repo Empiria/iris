@@ -1,0 +1,59 @@
+/* Design tokens. Colours come from theme/parameters.yaml via %color:Name%;
+   change them there, not here. */
+:root {
+  --iris-primary: %color:Primary%;
+  --iris-on-primary: %color:On Primary%;
+  --iris-background: %color:Background%;
+  --iris-surface: %color:Surface%;
+  --iris-on-surface: %color:On Surface%;
+  --iris-muted: %color:Muted%;
+  --iris-outline: %color:Outline%;
+
+  --iris-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --iris-font-size-body: 1rem;
+  --iris-font-size-heading: 2rem;
+  --iris-space-2: 0.5rem;
+  --iris-space-4: 1rem;
+  --iris-space-6: 1.5rem;
+  --iris-space-8: 2rem;
+  --iris-radius: 0.75rem;
+  --iris-content-width: 40rem;
+}
+
+body {
+  margin: 0;
+  background: var(--iris-background);
+  color: var(--iris-on-surface);
+  font-family: var(--iris-font-family);
+  font-size: var(--iris-font-size-body);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--iris-primary);
+}
+
+.iris-page {
+  box-sizing: border-box;
+  max-width: var(--iris-content-width);
+  margin: 0 auto;
+  padding: var(--iris-space-8) var(--iris-space-4);
+}
+
+.iris-card {
+  background: var(--iris-surface);
+  border: 1px solid var(--iris-outline);
+  border-radius: var(--iris-radius);
+  padding: var(--iris-space-6);
+}
+
+.iris-heading {
+  margin: 0 0 var(--iris-space-2);
+  font-size: var(--iris-font-size-heading);
+  font-weight: 600;
+}
+
+.iris-lede {
+  margin: 0;
+  color: var(--iris-muted);
+}
