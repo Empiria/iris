@@ -1,0 +1,38 @@
+# Empiria Anvil ruff baseline, with Iris additions.
+#
+# `select` REPLACES ruff's defaults rather than adding to them. Trimming this
+# list silently disables the rules that mechanically enforce the Empiria Python
+# standard.
+line-length = 88
+src = ["client_code", "server_code"]
+
+extend-exclude = [
+    # ruff-format reformats Python code blocks inside Markdown. Doc examples
+    # are written to read well, not to satisfy a formatter.
+    "*.md",
+    # Dependency cache and image source from `just deps`: third-party code.
+    ".anvil",
+    # Other checkouts live here when this is the main checkout.
+    ".claude/worktrees",
+]
+
+[lint]
+select = ["E", "F", "I001", "SIM", "C4", "PERF", "RET", "UP", "C90"]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.isort]
+known-third-party = ["anvil"]
+known-first-party = ["app"]
+
+[lint.per-file-ignores]
+# Two runtime floors these autofixes would breach. PEP 585 builtin generics
+# (`dict[str, Any]`) need Python 3.9; PEP 604 unions (`str | None`) need 3.10.
+# Anvil's runtime is below that, and Skulpt (client side) below it again.
+# SIM105 rewrites to contextlib.suppress, which is unverified in Skulpt.
+"client_code/**" = ["SIM105", "UP006", "UP007", "UP035", "UP045"]
+"server_code/**" = ["UP006", "UP007", "UP035", "UP045"]
+# Test cleanup loops swallow per-item errors on purpose: a failed teardown
+# delete must not abort the sweep.
+"tests/**" = ["PERF203"]

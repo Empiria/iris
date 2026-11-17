@@ -1,0 +1,21 @@
+# Empiria Anvil pre-commit baseline. Copy to .pre-commit-config.yaml.
+#
+# ruff and ruff-format replace the black/isort/flake8 trio. If you are copying
+# config from an older anvilistas repo instead, check every `repo: local` hook
+# actually resolves — anvil-extras' fix-version hook points at
+# scripts/fix_version.py, and copying the config without the script leaves a
+# gate that looks present and silently fails on first run.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

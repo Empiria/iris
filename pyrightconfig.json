@@ -1,0 +1,15 @@
+// Iris type-check config. The checker is anvil-pyright, which bundles the
+// anvil.* stubs, so no stub symlinks are wired in (they would switch the Anvil rules
+// off). tools/ and tests/ are dev scripts that import unstubbed yaml, playwright
+// and pytest, so they are left to ruff.
+{
+  "typeCheckingMode": "basic",
+  // The floor a deployed app might pin its server to, not the version you
+  // develop on. Keeps PEP 585/604 syntax out of annotations.
+  "pythonVersion": "3.9",
+  "exclude": [".anvil", ".venv", ".claude", "tests", "tools", "**/__pycache__"],
+  "executionEnvironments": [
+    { "root": "client_code" },
+    { "root": "server_code" }
+  ]
+}
