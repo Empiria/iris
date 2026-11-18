@@ -103,6 +103,22 @@ a {
   color: var(--iris-on-primary);
 }
 
+/* A button that reads as a text link, for secondary actions such as "Forgot password?". */
+.iris-link {
+  padding: var(--iris-space-2) 0;
+  border: 0;
+  background: none;
+  color: var(--iris-on-surface);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.iris-link:focus-visible {
+  outline: 3px solid var(--iris-primary);
+  outline-offset: 2px;
+}
+
 /* An error is carried by its wording and weight, not by colour alone. */
 .iris-message {
   margin: var(--iris-space-4) 0;

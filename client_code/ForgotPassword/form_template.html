@@ -1,0 +1,15 @@
+---
+custom_component: true
+---
+<div class="iris-forgot">
+  <button type="button" class="iris-link" anvil:dom-node="open_button"
+          anvil:on-dom:click="self._on_open">Forgot password?</button>
+  <form anvil:dom-node="reset_form" anvil:on-dom:submit="self._on_submit" hidden>
+    <label class="iris-field">Email
+      <input class="iris-input" type="email" autocomplete="username"
+             anvil:dom-node="reset_email">
+    </label>
+    <p class="iris-message" role="status" anvil:dom-node="reset_message" hidden></p>
+    <button type="submit" class="iris-button" anvil:dom-node="reset_button">Send reset link</button>
+  </form>
+</div>

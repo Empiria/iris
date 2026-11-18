@@ -10,6 +10,8 @@ import anvil.server
 import anvil.users
 from anvil_reactive.main import signal
 
+from iris.services import password_reset  # pyright: ignore[reportAttributeAccessIssue]
+
 SIGNED_OUT = {"signed_in": False, "is_staff": False, "email": None}
 
 
@@ -26,6 +28,10 @@ state = _State()
 
 def refresh():
     """Ask the server who is signed in and store the answer."""
+    if state.status is None:
+        # First load. A visitor from a password-reset email gets the Users
+        # service's own reset dialog here, before the sign-in form shows.
+        password_reset.offer_pending_reset()
     try:
         state.status = anvil.server.call("staff_status")
     except Exception:
