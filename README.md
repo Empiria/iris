@@ -1,5 +1,7 @@
 # Iris
 
+*Powered by [VDO.Ninja](https://vdo.ninja).*
+
 **Short meeting links that just work.** Send a client `meet.example.com/dk2wjd9d`,
 and they are in a high-quality video call one click later: no account, no
 install, no long URL.
@@ -254,14 +256,25 @@ a waiting room are outside v1.
   the iframe behaviour there has not been tested.
 - There is no settings page yet: edit the `setting` rows in the Data Tables
   editor.
-- No licence has been chosen yet. See [Licence](#licence).
+- Iris is MIT-licensed. See [Licence](#licence).
 
 ## Licence
 
-The repo does not have a licence file yet, and one has not been chosen. Until
-one is added, no licence is granted. VDO.Ninja is licensed separately
-(AGPL-3.0); Iris links to it and embeds it by URL, and is not VDO.Ninja or
-presented as official.
+Iris is released under the [MIT licence](LICENSE), copyright 2026 Empiria.
+
+VDO.Ninja is a separate project by Steve Seguin, licensed under AGPL-3.0. Iris
+links to VDO.Ninja and does not distribute its code.
+
+## Credits
+
+Iris is powered by [VDO.Ninja](https://vdo.ninja) by Steve Seguin (AGPL-3.0)
+and built on [Anvil](https://anvil.works), with the
+[routing](https://github.com/anvil-works/routing) (MIT) and
+[anvil-reactive](https://github.com/anvilistas/reactive) (MIT) dependencies.
+Full credits are in [CREDITS.md](CREDITS.md).
+
+Iris is an independent project. It is not affiliated with, or endorsed by,
+VDO.Ninja.
 
 ## Contributing
 
