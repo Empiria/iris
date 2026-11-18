@@ -259,7 +259,7 @@ def test_delete_one_off_link(
 
 def test_management_hidden_for_signed_out(page: Page):
     page.goto("/", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
-    expect(page.get_by_label("Email")).to_be_visible(timeout=FIRST_LOAD_MS)
+    expect(page.get_by_label("Email").first).to_be_visible(timeout=FIRST_LOAD_MS)
 
     # The list and its controls are in the page but hidden, and no room is shown.
     expect(page.get_by_role("heading", name="Rooms")).to_be_hidden()

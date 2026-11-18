@@ -29,7 +29,7 @@ def _open_sign_in(page: Page):
 
 
 def _sign_in(page: Page, email: str, password: str):
-    page.get_by_label("Email").fill(email)
+    page.get_by_label("Email").first.fill(email)
     page.get_by_label("Password").fill(password)
     page.get_by_role("button", name="Sign in").click()
 

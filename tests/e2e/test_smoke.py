@@ -26,7 +26,7 @@ def test_root_opens_admin_sign_in_and_server_call_succeeds(page: Page):
     expect(page.get_by_role("heading", name="Admin sign-in")).to_be_visible(
         timeout=FIRST_LOAD_MS
     )
-    expect(page.get_by_label("Email")).to_be_visible(timeout=VISIBLE_MS)
+    expect(page.get_by_label("Email").first).to_be_visible(timeout=VISIBLE_MS)
     expect(page.get_by_label("Password")).to_be_visible(timeout=VISIBLE_MS)
 
     # Anvil keeps its error banner in the DOM and toggles visibility.

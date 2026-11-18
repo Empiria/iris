@@ -95,7 +95,7 @@ def admin_page(browser, base_url, admin_login):
         expect(page.get_by_role("heading", name="Admin sign-in")).to_be_visible(
             timeout=FIRST_LOAD_MS
         )
-        page.get_by_label("Email").fill(email)
+        page.get_by_label("Email").first.fill(email)
         page.get_by_label("Password").fill(password)
         page.get_by_role("button", name="Sign in").click()
         expect(page.get_by_text("Signed in as")).to_be_visible(timeout=VISIBLE_MS)
