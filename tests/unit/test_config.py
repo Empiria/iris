@@ -68,3 +68,18 @@ def test_tables_are_client_invisible(config, table):
 
     assert schema["client"] == "none", f"db_schema.{table}.client must be none"
     assert schema["server"] == "full", f"db_schema.{table}.server must be full"
+
+
+def test_tables_service_enables_v2(config):
+    """Model classes subclass `app_tables.<t>.Row`, which only v2 tables provide.
+
+    Without `enable_v2`, `app_tables.room.Row` raises on the app server and every
+    server call fails with `Row`.
+    """
+    found = [
+        s
+        for s in config["services"]
+        if str(s.get("source", "")).endswith("services/tables.yml")
+    ]
+    assert len(found) == 1, "services must hold exactly one Data Tables entry"
+    assert found[0]["client_config"].get("enable_v2") is True
