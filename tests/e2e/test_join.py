@@ -174,3 +174,13 @@ def test_a_link_made_by_admin_opens_for_a_client(admin_page: Page, browser):
         assert slug not in handed
     finally:
         context.close()
+
+
+def test_join_page_credits_vdo_ninja(page: Page):
+    join_path(page, SEEDED_SLUG)
+
+    link = page.get_by_role("link", name="VDO.Ninja")
+    expect(link).to_be_visible(timeout=FIRST_LOAD_MS)
+    expect(link).to_have_attribute("href", "https://vdo.ninja")
+    expect(link).to_have_attribute("rel", re.compile("noopener"))
+    expect(page.get_by_text("not affiliated with VDO.Ninja")).to_be_visible()

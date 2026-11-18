@@ -163,6 +163,28 @@ a {
   outline-offset: 2px;
 }
 
+/* The small credit line at the foot of the join page. */
+.iris-footer {
+  margin: var(--iris-space-4) 0 0;
+  color: var(--iris-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.iris-footer p {
+  margin: 0;
+}
+
+.iris-footer-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.iris-footer-link:focus-visible {
+  outline: 3px solid var(--iris-primary);
+  outline-offset: 2px;
+}
+
 /* An error is carried by its wording and weight, not by colour alone. */
 .iris-message {
   margin: var(--iris-space-4) 0;
