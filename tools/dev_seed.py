@@ -8,13 +8,16 @@
 Connect to the running app server, call the ping callable, expect "pong", then
 seed the rows the local stack needs. The app has tables now, so rows go in from
 this script on the privileged uplink. Today that is the two dev accounts (a staff
-user and a non-staff viewer, made by the same code as `just create-staff --dev`).
-Later phases add their seed data here, each in its own function.
+user and a non-staff viewer, made by the same code as `just create-staff --dev`),
+and one known join room with its two VDO.Ninja settings, so the join e2e tests
+have a meeting to open. Later phases add their seed data here, each in its own
+function.
 
 The uplink key is a local-only value that matches the Containerfile. It is never
 printed.
 """
 
+import datetime
 import os
 import sys
 import threading
@@ -32,6 +35,22 @@ URL = ""
 
 # How long to wait for the uplink to come up before giving up.
 CONNECT_TIMEOUT_S = 20
+
+# The join room the local stack always has. tests/e2e/test_join.py repeats these
+# values, and a unit test keeps the two copies equal.
+# The slug people open: /testslug. Not a generated one-off slug.
+DEV_ROOM_SLUG = "testslug"
+DEV_ROOM_TITLE = "Seeded test meeting"
+# The VDO.Ninja room it hands off to: 20 characters, a-z and 0-9.
+DEV_ROOM_VDO = "kdvx2p8wmq5rt7hzn3cj"
+# A dev-only VDO.Ninja origin, not the default. http is allowed for 127.0.0.1.
+# Its host differs from the page host (localhost), so a hand-off to it is easy
+# to tell from a stay on the page.
+DEV_VDO_ORIGIN = "http://127.0.0.1:3030"
+# A dev copy of the room profile settings, stored as the vdo_profile setting.
+DEV_VDO_PROFILE = (
+    "ssq=-1&sharperscreen&rbr=50000&trb=50000&crb&codec=av1,vp9,vp8,h264&q=0"
+)
 
 
 def _unreachable_message() -> str:
@@ -78,6 +97,44 @@ def _seed_accounts() -> None:
     print(f"seed: viewer account ready ({create_staff.DEV_VIEWER_EMAIL}, {viewer})")
 
 
+def _put_setting(app_tables, key: str, value: str) -> None:
+    row = app_tables.setting.get(key=key)
+    if row is None:
+        app_tables.setting.add_row(key=key, value=value)
+    else:
+        row["value"] = value
+
+
+def seed_join_room(app_tables) -> str:
+    """Ensure the known join room and the vdo origin and profile settings.
+
+    Safe to run again: the room is found by slug and set to the constants, and
+    each setting is updated or added. No vdo_salt row is written. Returns
+    "created" when the room row was new, else "updated".
+    """
+    row = app_tables.room.get(slug=DEV_ROOM_SLUG)
+    if row is None:
+        app_tables.room.add_row(
+            slug=DEV_ROOM_SLUG,
+            vdo_room=DEV_ROOM_VDO,
+            title=DEV_ROOM_TITLE,
+            kind="one-off",
+            active=True,
+            created_by=create_staff.DEV_STAFF_EMAIL,
+            created=datetime.datetime.now(),
+        )
+        result = "created"
+    else:
+        row["vdo_room"] = DEV_ROOM_VDO
+        row["title"] = DEV_ROOM_TITLE
+        row["kind"] = "one-off"
+        row["active"] = True
+        result = "updated"
+    _put_setting(app_tables, "vdo_origin", DEV_VDO_ORIGIN)
+    _put_setting(app_tables, "vdo_profile", DEV_VDO_PROFILE)
+    return result
+
+
 def main() -> int:
     global URL
     try:
@@ -97,6 +154,8 @@ def main() -> int:
             return 1
         print("seed: uplink round trip ok (ping -> pong)")
         _seed_accounts()
+        result = seed_join_room(app_tables)
+        print(f"seed: join room ready ({DEV_ROOM_SLUG}, {result})")
     finally:
         anvil.server.disconnect()
     return 0
