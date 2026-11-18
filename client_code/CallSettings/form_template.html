@@ -1,0 +1,17 @@
+---
+custom_component: true
+---
+<section class="iris-card">
+  <h2 class="iris-subheading">Call settings</h2>
+  <p class="iris-lede">vdo.ninja parameters added to every meeting link, for
+    example <code>&amp;quality=1</code>. Leave it empty for plain vdo.ninja.</p>
+  <label class="iris-field">vdo.ninja parameters
+    <textarea class="iris-input iris-textarea" rows="4" maxlength="2000"
+              spellcheck="false" autocapitalize="off" autocomplete="off"
+              anvil:dom-node="profile_input"></textarea>
+  </label>
+  <button type="button" class="iris-button iris-button-primary"
+          anvil:dom-node="profile_save"
+          anvil:on-dom:click="self._on_save">Save settings</button>
+  <anvil-component name="profile_message" type="form:Message"></anvil-component>
+</section>

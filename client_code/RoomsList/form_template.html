@@ -1,0 +1,13 @@
+---
+custom_component: true
+events:
+  - name: rotated
+---
+<section class="iris-card">
+  <h2 class="iris-subheading">Rooms</h2>
+  <p class="iris-lede" anvil:dom-node="rooms_empty" hidden>No rooms yet. Create one above.</p>
+  <div class="iris-room-list" anvil:dom-node="rooms_list">
+    <anvil-component type="RepeatingPanel" name="rooms_panel" prop:item_template="RoomRow"></anvil-component>
+  </div>
+  <anvil-component name="rooms_message" type="form:Message" prop:level="alert"></anvil-component>
+</section>

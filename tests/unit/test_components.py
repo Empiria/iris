@@ -58,12 +58,32 @@ def test_embedded_components_name_a_real_form(form):
 
 
 def test_the_pages_use_the_primitives():
-    joined = "".join(_template(page) for page in ["Admin", "Join", "RoomRow"])
+    joined = "".join(
+        _template(page)
+        for page in [
+            "Admin",
+            "SignInCard",
+            "CreateMeeting",
+            "RoomsList",
+            "CallSettings",
+            "Join",
+            "RoomRow",
+        ]
+    )
 
     for name in PRIMITIVES:
         assert f"form:{name}" in joined, name
 
 
 def test_pages_do_not_rebuild_a_message_by_hand():
-    for page in ["Admin", "Join", "RoomRow", "ForgotPassword"]:
+    for page in [
+        "Admin",
+        "SignInCard",
+        "CreateMeeting",
+        "RoomsList",
+        "CallSettings",
+        "Join",
+        "RoomRow",
+        "ForgotPassword",
+    ]:
         assert 'class="iris-message"' not in _template(page), page
