@@ -26,7 +26,25 @@
             anvil:on-dom:click="self._on_sign_out">Sign out</button>
     <div anvil:dom-node="staff_tools">
       <section class="iris-card" anvil:dom-node="create_card">
-        <h2 class="iris-subheading">New one-off meeting</h2>
+        <h2 class="iris-subheading">New meeting</h2>
+        <fieldset class="iris-choice">
+          <legend class="iris-choice-legend">Kind of meeting</legend>
+          <label class="iris-choice-option">
+            <input type="radio" name="meeting_kind" value="one-off" checked
+                   anvil:dom-node="kind_one_off"
+                   anvil:on-dom:change="self._on_kind_change"> One-off link
+          </label>
+          <label class="iris-choice-option">
+            <input type="radio" name="meeting_kind" value="permanent"
+                   anvil:dom-node="kind_permanent"
+                   anvil:on-dom:change="self._on_kind_change"> Permanent room
+          </label>
+        </fieldset>
+        <label class="iris-field" anvil:dom-node="room_name_field" hidden>Room name, used in the link
+          <input class="iris-input" type="text" maxlength="64" autocomplete="off"
+                 autocapitalize="off" spellcheck="false"
+                 anvil:dom-node="room_name_input">
+        </label>
         <label class="iris-field">Meeting name (optional)
           <input class="iris-input" type="text" maxlength="80"
                  anvil:dom-node="title_input">
@@ -43,6 +61,17 @@
           <button type="button" class="iris-button" anvil:dom-node="copy_button"
                   anvil:on-dom:click="self._on_copy">Copy link</button>
           <p class="iris-message" role="status" anvil:dom-node="copy_message" hidden></p>
+          <div class="iris-secret" anvil:dom-node="passphrase_box" hidden>
+            <label class="iris-field">Passphrase
+              <input class="iris-input iris-secret-value" type="text" readonly
+                     autocomplete="off" spellcheck="false"
+                     anvil:dom-node="passphrase_output">
+            </label>
+            <button type="button" class="iris-button" anvil:dom-node="passphrase_copy"
+                    anvil:on-dom:click="self._on_copy_passphrase">Copy passphrase</button>
+            <p class="iris-message" role="status" anvil:dom-node="passphrase_copy_message" hidden></p>
+            <p class="iris-note">Copy this passphrase now and store it somewhere safe. It won't be shown again.</p>
+          </div>
         </div>
       </section>
       <section class="iris-card" anvil:dom-node="profile_card">

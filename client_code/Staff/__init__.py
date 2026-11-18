@@ -19,10 +19,15 @@ class Staff(StaffTemplate):
         self.init_components(**properties)
         self._profile_loaded = False
         self.add_event_handler("show", self.form_show)
+        self.add_event_handler("hide", self.form_hide)
 
     def form_show(self, **event_args):
         if staff_session.state.status is None:
             staff_session.refresh()
+
+    def form_hide(self, **event_args):
+        # Leaving the page drops the passphrase from it.
+        self._clear_passphrase()
 
     @render_effect
     def _render(self):
@@ -45,6 +50,7 @@ class Staff(StaffTemplate):
             self._profile_loaded = False
             self.dom_nodes["profile_input"].value = ""
             self._show_profile_message("")
+            self._clear_passphrase()
 
     def _show_message(self, text):
         message = self.dom_nodes["signin_message"]
@@ -95,32 +101,86 @@ class Staff(StaffTemplate):
         else:
             self._show_copy_message("Link copied.")
 
+    def _clear_passphrase(self):
+        """Empty the passphrase box and hide it, so it never outlives its room."""
+        self.dom_nodes["passphrase_output"].value = ""
+        self.dom_nodes["passphrase_box"].hidden = True
+        message = self.dom_nodes["passphrase_copy_message"]
+        message.textContent = ""
+        message.hidden = True
+
+    def _wants_permanent(self):
+        return bool(self.dom_nodes["kind_permanent"].checked)
+
+    def _on_kind_change(self, event, **properties):
+        permanent = self._wants_permanent()
+        self.dom_nodes["room_name_field"].hidden = not permanent
+        self.dom_nodes["create_button"].textContent = (
+            "Create room" if permanent else "Create link"
+        )
+        self._show_create_message("")
+
+    def _create(self, permanent, title):
+        """Make the room on the server and return its reply."""
+        if permanent:
+            name = str(self.dom_nodes["room_name_input"].value or "")
+            return anvil.server.call("create_permanent_room", name, title)
+        return anvil.server.call("create_one_off_link", title)
+
+    def _show_created(self, result, permanent):
+        base = links.base_from_location(
+            window.location.origin, window.location.pathname
+        )
+        link = links.link_for(base, result["slug"], links.ROUTE_OWNER)
+        self.dom_nodes["link_output"].value = link
+        if permanent:
+            self.dom_nodes["passphrase_output"].value = str(result["passphrase"])
+            self.dom_nodes["passphrase_box"].hidden = False
+        self.dom_nodes["result_box"].hidden = False
+        self._copy_link()
+
     def _on_create(self, event, **properties):
+        permanent = self._wants_permanent()
         title = str(self.dom_nodes["title_input"].value or "")
         self._show_create_message("")
         self._show_copy_message("")
+        self._clear_passphrase()
         button = self.dom_nodes["create_button"]
         button.disabled = True
         try:
-            result = anvil.server.call("create_one_off_link", title)
-            base = links.base_from_location(
-                window.location.origin, window.location.pathname
-            )
-            link = links.link_for(base, result["slug"], links.ROUTE_OWNER)
-            self.dom_nodes["link_output"].value = link
-            self.dom_nodes["result_box"].hidden = False
-            self._copy_link()
+            self._show_created(self._create(permanent, title), permanent)
         except permissions.PermissionDenied:
             self._show_create_message("You are not signed in as staff.")
             staff_session.refresh()
+        except ValueError as error:
+            # A room name that is taken, reserved or badly formed: the server's
+            # message is written for the person who typed it.
+            self._show_create_message(str(error))
         except Exception:
-            self._show_create_message("Could not create the link. Try again.")
+            self._show_create_message(
+                "Could not create the room. Try again."
+                if permanent
+                else "Could not create the link. Try again."
+            )
         finally:
             button.disabled = False
 
     def _on_copy(self, event, **properties):
         self._show_copy_message("")
         self._copy_link()
+
+    def _on_copy_passphrase(self, event, **properties):
+        """Copy the passphrase, or select it and say what to press."""
+        output = self.dom_nodes["passphrase_output"]
+        message = self.dom_nodes["passphrase_copy_message"]
+        try:
+            window.navigator.clipboard.writeText(str(output.value))
+            text = "Passphrase copied."
+        except Exception:
+            output.select()
+            text = "Copy failed. The passphrase is selected, so press Ctrl+C or Cmd+C."
+        message.textContent = text
+        message.hidden = False
 
     def _show_profile_message(self, text):
         message = self.dom_nodes["profile_message"]

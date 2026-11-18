@@ -87,6 +87,44 @@ a {
   font-family: ui-monospace, monospace;
 }
 
+/* A pair of radio choices. The label carries the choice, not colour. */
+.iris-choice {
+  margin: 0 0 var(--iris-space-4);
+  padding: 0;
+  border: 0;
+}
+
+.iris-choice-legend {
+  padding: 0;
+  margin-bottom: var(--iris-space-2);
+}
+
+.iris-choice-option {
+  display: inline-block;
+  margin-right: var(--iris-space-6);
+}
+
+.iris-choice-option input {
+  margin-right: var(--iris-space-2);
+}
+
+/* A value shown once, such as a new passphrase. */
+.iris-secret {
+  margin-top: var(--iris-space-4);
+  padding-top: var(--iris-space-4);
+  border-top: 1px solid var(--iris-outline);
+}
+
+.iris-secret-value {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+}
+
+.iris-note {
+  margin: var(--iris-space-4) 0 0;
+  color: var(--iris-muted);
+}
+
 .iris-button {
   padding: var(--iris-space-2) var(--iris-space-4);
   border: 1px solid var(--iris-outline);

@@ -5,8 +5,13 @@
   </section>
   <section class="iris-card" anvil:dom-node="join_card" hidden>
     <h1 class="iris-heading" anvil:dom-node="meeting_title"></h1>
-    <p class="iris-lede">Enter your name to join the meeting.</p>
+    <p class="iris-lede" anvil:dom-node="join_lede">Enter your name to join the meeting.</p>
     <form anvil:dom-node="join_form" anvil:on-dom:submit="self._on_submit">
+      <label class="iris-field" anvil:dom-node="passphrase_field" hidden>Passphrase
+        <input class="iris-input" type="password" autocomplete="off"
+               autocapitalize="off" spellcheck="false" maxlength="200"
+               anvil:dom-node="passphrase_input">
+      </label>
       <label class="iris-field">Your name
         <input class="iris-input" type="text" maxlength="60" autocomplete="name"
                anvil:dom-node="name_input">
