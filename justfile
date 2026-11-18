@@ -218,7 +218,7 @@ create-admin *args: _need-stack
 e2e: _need-stack
     uv run pytest tests/e2e
 
-# [host] Run a Phase 2 spike: `just spike all`, `just spike <name>` or `just spike list`.
+# [host] Run a spike: `just spike all`, `just spike <name>` or `just spike list`.
 # Host-only like the other stack recipes: it needs podman and the image from `just build`.
 spike *args: (_need-podman "spike")
     uv run --script tools/spike.py {{ args }}

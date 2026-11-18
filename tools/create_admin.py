@@ -6,7 +6,7 @@
 # requires-python = ">=3.10"
 # dependencies = ["anvil-uplink>=0.7.1"]
 # ///
-"""Local launcher for scripts/CreateAdmin.py, the first-admin script (DEPL-03).
+"""Local launcher for scripts/CreateAdmin.py, the first-admin script.
 
 Local only: it connects to the dev stack over the dev uplink and launches the
 script as a background task. A hosted deployment runs the script from the Anvil

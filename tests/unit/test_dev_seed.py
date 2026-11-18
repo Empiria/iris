@@ -100,7 +100,7 @@ def test_the_e2e_copy_of_each_constant_matches(seed, constant, name):
     assert found.group(1) == getattr(seed, constant)
 
 
-# The seeded permanent room (JOIN-02, JOIN-03, JOIN-05).
+# The seeded permanent room.
 
 
 def test_the_first_run_creates_the_permanent_room(seed, tables):

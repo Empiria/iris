@@ -190,7 +190,7 @@ def test_room_methods_are_registered_server_methods(Room):
     assert {"Room.lookup", "Room.create_one_off"} <= registered
 
 
-# --- permanent rooms (JOIN-02, JOIN-03, D-9) ------------------------------
+# --- permanent rooms ------------------------------
 
 START = datetime.datetime(2026, 11, 18, 12, 0, 0)
 PERMANENT_COLUMNS = (
@@ -637,7 +637,7 @@ def test_permanent_methods_are_registered(Room):
     assert {"Room.create_permanent", "Room.unlock"} <= registered
 
 
-# --- room management (ADMIN-04, D-7, D-8) ---------------------------------
+# --- room management ---------------------------------
 
 SUMMARY_KEYS = {"slug", "title", "kind", "created"}
 MANAGEMENT = ("list_for_admin", "update_title", "remove", "rotate")

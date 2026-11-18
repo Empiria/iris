@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""ADMIN-06 gate: every public entry point is named here, or it requires admin.
+"""Admin gate: every public entry point is named here, or it requires admin.
 
 The server never trusts the client, so each callable, server method and route
 the app registers must either be on an allow-list below or check admin itself.
 A new registration that is neither fails this test. Adding to an allow-list is a
-deliberate public endpoint and must be justified in the plan that adds it.
+deliberate public endpoint and must be justified where it is added.
 """
 
 import ast
@@ -21,17 +21,17 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 # Callables any browser may call. ping: the stack health check. admin_status:
-# reports only the caller's own sign-in state (plan 02-03). lookup_room: public
-# by design, returns a room only for an active recorded slug (JOIN-01, JOIN-04),
-# released to anyone holding the link (plan 02-05). unlock_room: clients without
+# reports only the caller's own sign-in state. lookup_room: public
+# by design, returns a room only for an active recorded slug,
+# released to anyone holding the link. unlock_room: clients without
 # accounts unlock a permanent room; checks the passphrase and is throttled
-# (plan 03-04).
+#.
 PUBLIC_CALLABLES = {"ping", "admin_status", "lookup_room", "unlock_room"}
 
 # Server methods any browser may call. Room.lookup is how a meeting link opens
 # and releases nothing for a slug no admin created. Setting methods read
-# only the vdo.ninja keys that a valid link releases anyway (plan 02-02).
-# Room.unlock is the model side of unlock_room (plan 03-04).
+# only the vdo.ninja keys that a valid link releases anyway.
+# Room.unlock is the model side of unlock_room.
 PUBLIC_SERVER_METHODS = {
     "Room.lookup",
     "Room.unlock",
@@ -43,7 +43,7 @@ PUBLIC_SERVER_METHODS = {
 PUBLIC_ROUTES = set()
 
 # Files that may call signup_with_email or force_login. A browser cannot launch
-# a script (spike S7d), so the first-admin script is not a public entry point.
+# a script, so the first-admin script is not a public entry point.
 SIGNUP_ALLOWED = {"scripts/CreateAdmin.py"}
 
 ACCOUNT_CREATORS = {"signup_with_email", "force_login"}

@@ -18,7 +18,7 @@ Iris is an [Anvil](https://anvil.works) app: Python on both client and server, w
 - `client_code/globals.py`: the `session` object (router lifecycle).
 - `client_code/services/routes.py`: route classes for the `routing` dependency. `/` is the admin page (`/admin` and the older `/staff` are aliases), and every other path is a meeting slug.
 - `server_code/`: server modules. Server-side packages go in `requirements.txt`.
-- `scripts/CreateAdmin.py`: the first-admin script (DEPL-03; it still reads the old `iris_staff_*` secrets and `IRIS_STAFF_*` variables as a fallback) and the only caller of `signup_with_email`. `just create-admin` launches it on the local stack, and a hosted app runs it from the Anvil editor. `anvil validate` rejects a `scripts` path, so `just validate` skips it.
+- `scripts/CreateAdmin.py`: the first-admin script (it still reads the old `iris_staff_*` secrets and `IRIS_STAFF_*` variables as a fallback) and the only caller of `signup_with_email`. `just create-admin` launches it on the local stack, and a hosted app runs it from the Anvil editor. `anvil validate` rejects a `scripts` path, so `just validate` skips it.
 - `server_code/health.py`: provides the `ping` callable the local stack tests use.
 - `theme/`: `parameters.yaml` (colour scheme), `assets/theme.css` (design tokens and all styles), `templates.yaml` (empty: there are no theme page templates).
 - `tools/`: `anvil_deps.py` fetches the dependency apps with no login. `leftovers.py` is the starter-leftovers check. It also reads an optional untracked `.leftovers-local` file of extra regexes, one per line. `dev_seed.py` seeds the local stack. `stack_url.py` finds the local stack's URL (see Local stack).

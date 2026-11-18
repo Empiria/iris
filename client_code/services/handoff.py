@@ -3,7 +3,7 @@
 
 """The one place that hands a person from Iris to the room.
 
-This module applies the recorded iframe decision (02-SPIKE-RESULTS.md). Browsers
+This module applies the chosen iframe decision. Browsers
 that get the embed see the room inside the Iris page, with the short link still
 in the address bar. Every other browser is sent to the address by a top-level
 redirect. The address is always the one `join.join_url` built from the server
@@ -46,10 +46,10 @@ IN_APP_MARKERS = (
 
 MODES = ("iframe", "iframe-except", "redirect")
 
-# The recorded decision, from the Decisions block of 02-SPIKE-RESULTS.md.
+# The chosen decision.
 # HANDOFF_MODE is iframe, iframe-except or redirect. REDIRECT_BROWSERS_TEXT is
-# the comma list from `Redirect browsers:` (or "none"). A unit test fails if
-# either differs from that file.
+# the comma list of browsers to redirect (or "none"). A unit test pins both
+# values, so changing one is a deliberate edit.
 HANDOFF_MODE = "iframe-except"
 REDIRECT_BROWSERS_TEXT = "safari-ios, in-app"
 

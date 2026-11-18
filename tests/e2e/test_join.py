@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""Join a meeting from its link (JOIN-01, JOIN-04, JOIN-06, DEPL-01).
+"""Join a meeting from its link.
 
 Runs against the live local stack after `just seed`, which makes the room
 `testslug` and points the vdo_origin setting at DEV_VDO_ORIGIN. The browser never
@@ -52,8 +52,9 @@ def join_path(page: Page, slug: str):
 def handed_off_url(page: Page, timeout_ms: int = VISIBLE_MS) -> str:
     """The address Iris sent the person to: the page itself, or an iframe on it.
 
-    The hand-off is a top-level redirect today and becomes an iframe in a later
-    plan. Either way the address is the one that starts with the seeded origin.
+    The hand-off is either a top-level redirect or an
+    iframe. Either way the address is the
+    one that starts with the seeded origin.
     """
     deadline = time.monotonic() + timeout_ms / 1000
     while time.monotonic() < deadline:

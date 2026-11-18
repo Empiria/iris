@@ -7,7 +7,7 @@ from routing import router
 from iris.services import join  # pyright: ignore[reportAttributeAccessIssue]
 
 # Routes match in the order they are declared, so /, /admin and /staff come
-# before the /:slug catch-all (spike S1c). Reserved slugs such as "admin" and
+# before the /:slug catch-all. Reserved slugs such as "admin" and
 # "staff" are refused again by join.is_joinable_slug, so a meeting can never
 # shadow a page.
 
@@ -37,7 +37,7 @@ class JoinRoute(router.Route):
 
     def load_data(self, **loader_args):
         # Returns a state dict, never raises and never returns None, so the form
-        # decides what to show and no error banner appears (spike S1b).
+        # decides what to show and no error banner appears.
         return join.load_meeting(loader_args["params"]["slug"], anvil.server.call)
 
     def meta(self, **kwargs):

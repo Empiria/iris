@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""lookup_room: the public callable that opens a meeting link (JOIN-01, JOIN-04).
+"""lookup_room: the public callable that opens a meeting link.
 
-Also pins JOIN-06 at the lookup (a stored profile that forces relaying never
-leaves the server) and DEPL-01 (the origin comes from the setting table).
+Also pins that a stored profile that forces relaying never
+leaves the server, and that the origin comes from the setting table.
 """
 
 import importlib
@@ -121,7 +121,7 @@ def test_a_bad_input_returns_none_and_reads_nothing(meetings, tables, bad):
     assert tables.room.reads == 0
 
 
-# --- DEPL-01 --------------------------------------------------------------
+# --- origin from the setting table ------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -146,7 +146,7 @@ def test_the_stored_profile_and_salt_are_returned(meetings, tables):
     assert found["salt"] == "pepper"
 
 
-# --- JOIN-06 at the lookup ------------------------------------------------
+# --- relaying profiles stay on the server -----------------------------------
 
 
 @pytest.mark.parametrize("bad", ["q=0&meshcast", "relay=1", "a=1&%52elay=1"])

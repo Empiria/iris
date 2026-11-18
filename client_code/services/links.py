@@ -9,9 +9,9 @@ server-only import and does no data access.
 
 from iris.services import slugs  # pyright: ignore[reportAttributeAccessIssue]
 
-# The value of the "Route owner:" line in 02-SPIKE-RESULTS.md (Decisions block).
-# One of "runtime" (a Routing route), "own" (an @anvil.server.route) or "query"
-# (/?m=<slug>). The first two give <base>/<slug>, "query" gives <base>/?m=<slug>.
+# Who owns the meeting route. One of "runtime" (a Routing route), "own" (an
+# @anvil.server.route) or "query" (/?m=<slug>). The first two give
+# <base>/<slug>, "query" gives <base>/?m=<slug>.
 ROUTE_OWNER = "runtime"
 
 _PATH_OWNERS = ("runtime", "own")

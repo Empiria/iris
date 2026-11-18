@@ -89,7 +89,7 @@ def list_rooms():
 
 @anvil.server.callable(require_user=permissions.is_admin)
 def update_room(slug, title):
-    """Change a room's title and return its summary. Admins only (D-7).
+    """Change a room's title and return its summary. Admins only.
 
     The slug cannot change, because links already shared point at it. Raises
     ValueError("No such room.") for an unknown slug.
@@ -101,7 +101,7 @@ def update_room(slug, title):
 
 @anvil.server.callable(require_user=permissions.is_admin)
 def delete_room(slug):
-    """Delete a room for good, after the admin confirmed it. Admins only (D-8).
+    """Delete a room for good, after the admin confirmed it. Admins only.
 
     Its link stops working at once. Raises ValueError("No such room.") for an
     unknown slug.
@@ -113,7 +113,7 @@ def delete_room(slug):
 
 @anvil.server.callable(require_user=permissions.is_admin)
 def rotate_passphrase(slug):
-    """Give a permanent room a new passphrase and return it. Admins only (D-8).
+    """Give a permanent room a new passphrase and return it. Admins only.
 
     The reply carries the slug and the new passphrase, shown this once. The old
     passphrase, vdo room and vdo password stop working. A one-off room has no

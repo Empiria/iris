@@ -251,7 +251,7 @@ def test_the_script_has_no_prompt_and_no_network():
     forbidden_modules = {"getpass", "socket", "urllib", "requests", "http", "httpx"}
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-            assert node.func.id != "input", "a prompt raises EOFError (S7i)"
+            assert node.func.id != "input", "a prompt raises EOFError"
         if isinstance(node, ast.Import):
             for alias in node.names:
                 assert alias.name.split(".")[0] not in forbidden_modules
@@ -262,7 +262,7 @@ def test_the_script_has_no_prompt_and_no_network():
 def test_the_script_names_its_run_instructions():
     doc = ast.get_docstring(ast.parse(SCRIPT.read_text(encoding="utf-8")))
 
-    for needle in ("DEPL-03", "iris_admin_password", "just create-admin"):
+    for needle in ("iris_admin_password", "just create-admin"):
         assert needle in doc
 
 

@@ -11,7 +11,7 @@ from iris.services.model.setting import Setting
 
 _SLUG_ATTEMPTS = 10
 
-# D-9: this many wrong passphrases in a row lock a room's unlock for a while.
+# This many wrong passphrases in a row lock a room's unlock for a while.
 UNLOCK_LIMIT = 10
 UNLOCK_LOCK_MINUTES = 5
 
@@ -278,7 +278,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
     @anvil.server.server_method
     @classmethod
     def update_title(cls, slug, title):
-        """Change a room's title. Admins only. The slug stays as it is (D-7)."""
+        """Change a room's title. Admins only. The slug stays as it is."""
         permissions.require_admin()
         row = _find_room(slug)
         if not isinstance(title, str):
@@ -290,7 +290,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
     @anvil.server.server_method
     @classmethod
     def remove(cls, slug):
-        """Delete a room for good. Admins only (D-8). Its link stops working."""
+        """Delete a room for good. Admins only. Its link stops working."""
         permissions.require_admin()
         row = _find_room(slug)
         row_slug = row["slug"]
@@ -300,7 +300,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
     @anvil.server.server_method
     @classmethod
     def rotate(cls, slug):
-        """Give a permanent room a new passphrase. Admins only (D-8).
+        """Give a permanent room a new passphrase. Admins only.
 
         The vdo room and vdo password are replaced too, so a person holding the
         old details is out of the room, and any lock is cleared. The new

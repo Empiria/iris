@@ -14,7 +14,7 @@ import hashlib
 import hmac
 import secrets
 
-# 600000 costs about 0.1 s of server CPU per check (spike S3, sandbox timing).
+# 600000 costs about 0.1 s of server CPU per check (measured in a sandbox).
 ITERATIONS = 600000
 SALT_BYTES = 16
 

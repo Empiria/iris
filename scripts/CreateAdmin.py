@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""Create the first admin user (DEPL-03).
+"""Create the first admin user.
 
 Sign-up is off and a browser cannot launch a script, so this is the only way
 the first admin account comes to exist. It refuses to run once any admin user

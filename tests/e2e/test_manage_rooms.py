@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""Manage rooms from the admin page: list, edit title, rotate, delete (ADMIN-04).
+"""Manage rooms from the admin page: list, edit title, rotate, delete.
 
 Runs against the live local stack. Each test makes its own rooms through the
 page, and a fixture deletes every room it made over the privileged uplink

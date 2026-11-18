@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""The MeetingFrame template and its use on the Join page (JOIN-07).
+"""The MeetingFrame template and its use on the Join page.
 
 Client forms can't run under pytest, so these pin the template facts that matter
 in a browser: the room's permissions, the referrer policy, no source before Join.

@@ -10,9 +10,8 @@ call is passed in as an argument, which also keeps this module unit-testable.
 
 from iris.services import passphrase, slugs, vdo  # pyright: ignore[reportAttributeAccessIssue]
 
-# Whether the room, label and salt go after the "#" in the join address. Read
-# from the "Join URL parameters:" line of the Decisions block in
-# 02-SPIKE-RESULTS.md: "fragment" gives True, "query" gives False.
+# Whether the room, label and salt go after the "#" in the join address. True
+# puts them in the fragment and False in the query string. A unit test pins the value.
 JOIN_IN_FRAGMENT = True
 
 NAME_MAX = 60

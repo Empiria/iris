@@ -19,8 +19,8 @@ DEFAULT_PROFILE = ""
 
 # Parameters that force relaying or change the media path. Lower-cased and
 # percent-decoded before the check. Read from the vdo.ninja develop main.js on
-# 2026-11-18, confidence MEDIUM until the S6c spike (plan 02-01) prints the
-# live list. Widen these lists to widen the refusal; no code change is needed.
+# 2026-11-18, confidence MEDIUM until checked against the live list.
+# Widen these lists to widen the refusal; no code change is needed.
 # A key that starts with one of these prefixes is refused.
 DENY_PREFIXES = ("meshcast", "relay")
 # A key that equals one of these is refused. `turn`, `stun` and `nomeshcast`

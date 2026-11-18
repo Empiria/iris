@@ -3,7 +3,7 @@
 
 """The room opens in an iframe on Join, except where the decision says redirect.
 
-JOIN-07. Desktop Chromium is not in the redirect list, so Join embeds the room and
+Desktop Chromium is not in the redirect list, so Join embeds the room and
 the page stays on Iris. An iPhone user agent is "safari-ios", which redirects.
 The seeded VDO origin is answered by a stub, so the browser never leaves the machine.
 """

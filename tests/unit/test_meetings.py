@@ -135,7 +135,7 @@ def test_the_title_defaults_to_empty(meetings, tables, admin):
     assert meetings.create_one_off_link()["title"] == ""
 
 
-# --- ADMIN-07, pinned from the creation side ------------------------------
+# --- pinned from the creation side ------------------------------
 
 
 def test_lookup_finds_the_created_room_and_nothing_else(
@@ -291,7 +291,7 @@ def test_create_permanent_room_the_model_refuses_a_non_admin_caller(
     assert tables.room.rows == []
 
 
-# --- unlock_room (JOIN-02, JOIN-03, D-9) ----------------------------------
+# --- unlock_room ----------------------------------
 
 
 def test_unlock_room_is_a_plain_public_callable(meetings):
@@ -337,7 +337,7 @@ def test_lookup_room_of_a_permanent_slug_is_locked_for_everyone(
     assert meetings.lookup_room("ACME-BOARD") == {"kind": "permanent", "locked": True}
 
 
-# --- room management callables (ADMIN-04, D-7, D-8) -----------------------
+# --- room management callables -----------------------
 
 MANAGEMENT_CALLABLES = ("list_rooms", "update_room", "delete_room", "rotate_passphrase")
 
