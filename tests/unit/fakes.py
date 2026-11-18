@@ -117,6 +117,23 @@ class FakeTables:
             tables[name] = FakeTable(name)
         return tables[name]
 
+    def snapshot(self):
+        """Each table's rows and their values, for `restore`."""
+        return {
+            table: [(row, dict(row._values), row.saves) for row in table.rows]
+            for table in self._tables.values()
+        }
+
+    def restore(self, snapshot):
+        """Put every table back as `snapshot` found it (a rolled-back transaction)."""
+        for table, saved in snapshot.items():
+            table.rows = []
+            for row, values, saves in saved:
+                row._values.clear()
+                row._values.update(values)
+                object.__setattr__(row, "saves", saves)
+                table.rows.append(row)
+
     def clear(self):
         """Empty every table and zero its read count. Row classes stay."""
         for table in self._tables.values():

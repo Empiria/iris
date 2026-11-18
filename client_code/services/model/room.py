@@ -35,6 +35,16 @@ def _verifier():
     return __import__("iris.verifier", fromlist=["verifier"])
 
 
+def _in_transaction():
+    """`anvil.tables.in_transaction`, loaded when first needed (server only)."""
+    return __import__("anvil.tables", fromlist=["tables"]).in_transaction
+
+
+def _transaction_conflict():
+    """The `TransactionConflict` class: raised once Anvil's own retries run out."""
+    return __import__("anvil.tables", fromlist=["tables"]).TransactionConflict
+
+
 def _naive_utc(moment):
     """`moment` as a naive UTC datetime, so stored and current times compare.
 
@@ -68,6 +78,79 @@ def _store_attempts(row, failed, locked_until):
     changes = {"failed_unlocks": failed, "locked_until": locked_until}
     row.update(**changes)
     row.save()
+
+
+def _reserve_attempt(slug):
+    """Count one unlock attempt on `slug` before its passphrase is checked.
+
+    Server only: never make this a callable.
+
+    Returns {"status": "missing"} or {"status": "throttled"} when the guess
+    must be refused, else {"status": "reserved", "record": {...}} with the
+    verifier fields to check against. The read, the limit test and the
+    write run in one transaction, so parallel guesses each take their own
+    slot and cannot together pass UNLOCK_LIMIT. The count goes up here, not
+    after the slow hash, and a correct guess clears it again in `_release`.
+    """
+    in_transaction = _in_transaction()
+
+    def reserve():
+        row = app_tables.room.get(slug=slug)
+        if row is None or row["active"] is not True or row["kind"] != "permanent":
+            return {"status": "missing"}
+        now = _now()
+        failed = row["failed_unlocks"] or 0
+        locked_until = row["locked_until"]
+        if locked_until is not None:
+            if _naive_utc(locked_until) > now:
+                return {"status": "throttled"}
+            # The lock has run out: this guess starts a fresh count.
+            failed = 0
+        failed += 1
+        lock = None
+        if failed >= UNLOCK_LIMIT:
+            lock = now + datetime.timedelta(minutes=UNLOCK_LOCK_MINUTES)
+        _store_attempts(row, failed, lock)
+        return {
+            "status": "reserved",
+            "record": {
+                "verifier": row["verifier"],
+                "verifier_salt": row["verifier_salt"],
+                "kdf_iterations": row["kdf_iterations"],
+            },
+        }
+
+    return in_transaction(reserve)()
+
+
+def _release(slug, verifier_salt):
+    """After a right passphrase: clear the count and return the room's details.
+
+    Server only: never make this a callable.
+
+    None if the room was deleted, deactivated or given a new passphrase
+    while the hash ran, so a rotation cannot hand out the old details. The
+    details are read here, in the same transaction as the reset.
+    """
+    in_transaction = _in_transaction()
+
+    def release():
+        row = app_tables.room.get(slug=slug)
+        if (
+            row is None
+            or row["active"] is not True
+            or row["kind"] != "permanent"
+            or row["verifier_salt"] != verifier_salt
+        ):
+            return None
+        _store_attempts(row, 0, None)
+        return {
+            "vdo_room": row["vdo_room"],
+            "password": row["vdo_password"],
+            "title": row["title"],
+        }
+
+    return in_transaction(release)()
 
 
 def _summary(row):
@@ -160,7 +243,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
             kind="one-off",
             active=True,
             created_by=user["email"],
-            created=datetime.datetime.now(),
+            created=_now(),
         )
         return {"slug": slug, "title": title}
 
@@ -213,7 +296,10 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         {"ok": False, "reason": ...} with a reason of "missing", "empty",
         "throttled" or "incorrect". The reasons carry no input text. An empty
         input, an oversized one and a locked room return before any hashing, and
-        10 wrong attempts in a row lock the room for 5 minutes.
+        10 wrong attempts in a row lock the room for 5 minutes. Each attempt is
+        counted in a transaction before it is hashed, so parallel guesses
+        cannot exceed the limit. A room that is unknown, inactive or one-off
+        answers "missing" alike.
         """
         slug = slugs.normalise(slug) if isinstance(slug, str) else ""
         if not slugs.looks_like_slug(slug):
@@ -222,47 +308,33 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         if refusal is not None:
             return {"ok": False, "reason": refusal}
 
-        row = app_tables.room.get(slug=slug)
-        if row is None or row["active"] is not True or row["kind"] != "permanent":
-            return {"ok": False, "reason": "missing"}
+        try:
+            reserved = _reserve_attempt(slug)
+        except _transaction_conflict():
+            # Too many writers at once, even after Anvil's own retries. Fail
+            # closed: refuse the guess without hashing it.
+            return {"ok": False, "reason": "throttled"}
+        if reserved["status"] != "reserved":
+            return {"ok": False, "reason": reserved["status"]}
 
-        now = _now()
-        failed = row["failed_unlocks"] or 0
-        locked_until = row["locked_until"]
-        if locked_until is not None:
-            if _naive_utc(locked_until) > now:
-                return {"ok": False, "reason": "throttled"}
-            # The lock has run out: the next guess starts a fresh count.
-            failed = 0
-
-        record = {
-            "verifier": row["verifier"],
-            "verifier_salt": row["verifier_salt"],
-            "kdf_iterations": row["kdf_iterations"],
-        }
-        if not _verifier().check_passphrase(normalised, record):
-            failed += 1
-            lock = None
-            if failed >= UNLOCK_LIMIT:
-                lock = now + datetime.timedelta(minutes=UNLOCK_LOCK_MINUTES)
-            _store_attempts(row, failed, lock)
+        if not _verifier().check_passphrase(normalised, reserved["record"]):
+            # The miss was counted when the attempt was reserved.
             return {"ok": False, "reason": "incorrect"}
 
-        if failed or locked_until is not None:
-            _store_attempts(row, 0, None)
+        try:
+            found = _release(slug, reserved["record"]["verifier_salt"])
+        except _transaction_conflict():
+            return {"ok": False, "reason": "throttled"}
+        if found is None:
+            return {"ok": False, "reason": "incorrect"}
         config = Setting.vdo_config()
-        return {
-            "ok": True,
-            "found": {
-                "vdo_room": row["vdo_room"],
-                "password": row["vdo_password"],
-                "title": row["title"],
-                "origin": config["origin"],
-                "profile": config["profile"],
-                "salt": config["salt"],
-                "kind": "permanent",
-            },
-        }
+        found.update(
+            origin=config["origin"],
+            profile=config["profile"],
+            salt=config["salt"],
+            kind="permanent",
+        )
+        return {"ok": True, "found": found}
 
     @anvil.server.server_method
     @classmethod

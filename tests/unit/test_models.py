@@ -619,6 +619,156 @@ def test_a_timezone_aware_lock_time_is_compared_correctly(
     assert Room.unlock("acme-board", made["passphrase"])["ok"] is True
 
 
+def test_the_tenth_miss_locks_and_the_eleventh_is_refused_unhashed(
+    Room, tables, admin, as_user, fast_kdf, clock, verifier, monkeypatch
+):
+    _permanent(Room)
+    _signed_out(as_user)
+    hashed = []
+    real = verifier.check_passphrase
+
+    def counting(text, record):
+        hashed.append(text)
+        return real(text, record)
+
+    monkeypatch.setattr(verifier, "check_passphrase", counting)
+
+    reasons = [Room.unlock("acme-board", "aaaa-bbbb-cccc")["reason"] for _ in range(11)]
+
+    assert reasons == ["incorrect"] * 10 + ["throttled"]
+    assert len(hashed) == 10
+    assert tables.room.rows[0]["failed_unlocks"] == 10
+
+
+def test_the_lock_ends_exactly_five_minutes_after_the_tenth_miss(
+    Room, tables, admin, as_user, fast_kdf, clock
+):
+    made = _permanent(Room)
+    _signed_out(as_user)
+    for _ in range(10):
+        Room.unlock("acme-board", "aaaa-bbbb-cccc")
+
+    clock.advance(minutes=4, seconds=59)
+    assert Room.unlock("acme-board", made["passphrase"])["reason"] == "throttled"
+    clock.advance(seconds=1)
+    assert Room.unlock("acme-board", made["passphrase"])["ok"] is True
+
+
+def test_overlapping_guesses_cannot_exceed_the_limit(
+    Room, tables, admin, as_user, fast_kdf, clock, verifier, monkeypatch
+):
+    """Guesses that overlap while one is still hashing are counted before hashing.
+
+    This is not a real race: the fake tables have no threads. The hash step is
+    made to start the next guess before it returns, so eleven guesses are all
+    in flight at once. A version that read the count, hashed, then wrote it
+    would let all eleven hash. It proves the count is taken before the slow
+    step; it does not prove Anvil's transaction isolation, which only a
+    running server can.
+    """
+    _permanent(Room)
+    _signed_out(as_user)
+    real = verifier.check_passphrase
+    hashed = []
+    outcomes = []
+
+    def overlapping(text, record):
+        hashed.append(text)
+        if len(hashed) < 11:
+            outcomes.append(Room.unlock("acme-board", "aaaa-bbbb-cccc")["reason"])
+        return real(text, record)
+
+    monkeypatch.setattr(verifier, "check_passphrase", overlapping)
+
+    first = Room.unlock("acme-board", "aaaa-bbbb-cccc")["reason"]
+
+    assert len(hashed) == 10
+    assert first == "incorrect"
+    assert outcomes.count("incorrect") == 9
+    assert outcomes.count("throttled") == 1
+    assert tables.room.rows[0]["failed_unlocks"] == 10
+
+
+def test_a_write_conflict_is_retried_and_counts_the_guess_once(
+    Room, tables, admin, as_user, fast_kdf, clock, load_client_module, monkeypatch
+):
+    from anvil.tables import TransactionConflict
+
+    module = load_client_module("services/model/room")
+    _permanent(Room)
+    _signed_out(as_user)
+    real = module._store_attempts
+    conflicts = []
+
+    def conflicting_once(row, failed, locked_until):
+        real(row, failed, locked_until)
+        if not conflicts:
+            conflicts.append(1)
+            raise TransactionConflict()
+
+    monkeypatch.setattr(module, "_store_attempts", conflicting_once)
+
+    assert Room.unlock("acme-board", "aaaa-bbbb-cccc")["reason"] == "incorrect"
+    assert conflicts == [1]
+    assert tables.room.rows[0]["failed_unlocks"] == 1
+
+
+def test_unending_conflicts_refuse_the_guess_without_hashing(
+    Room,
+    tables,
+    admin,
+    as_user,
+    fast_kdf,
+    clock,
+    load_client_module,
+    verifier,
+    monkeypatch,
+):
+    from anvil.tables import TransactionConflict
+
+    module = load_client_module("services/model/room")
+    made = _permanent(Room)
+    _signed_out(as_user)
+
+    def always(row, failed, locked_until):
+        raise TransactionConflict()
+
+    def boom(*args, **kwargs):
+        raise AssertionError("hashed without a counted attempt")
+
+    monkeypatch.setattr(module, "_store_attempts", always)
+    monkeypatch.setattr(verifier, "check_passphrase", boom)
+
+    assert Room.unlock("acme-board", made["passphrase"]) == {
+        "ok": False,
+        "reason": "throttled",
+    }
+
+
+def test_a_rotation_during_the_hash_does_not_release_the_old_details(
+    Room, tables, admin, as_user, fast_kdf, clock, verifier, monkeypatch
+):
+    made = _permanent(Room)
+    old_room = tables.room.rows[0]["vdo_room"]
+    _signed_out(as_user)
+    real = verifier.check_passphrase
+
+    def rotating(text, record):
+        result = real(text, record)
+        as_user(admin_user)
+        Room.rotate("acme-board")
+        _signed_out(as_user)
+        return result
+
+    admin_user = admin
+    monkeypatch.setattr(verifier, "check_passphrase", rotating)
+
+    result = Room.unlock("acme-board", made["passphrase"])
+
+    assert result == {"ok": False, "reason": "incorrect"}
+    assert tables.room.rows[0]["vdo_room"] != old_room
+
+
 def test_a_damaged_verifier_refuses_every_attempt(
     Room, tables, admin, as_user, fast_kdf
 ):

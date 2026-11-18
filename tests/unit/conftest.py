@@ -80,6 +80,35 @@ class AuthenticationFailed(Exception):
     """Stands in for anvil.users.AuthenticationFailed."""
 
 
+class TransactionConflict(Exception):
+    """Stands in for anvil.tables.TransactionConflict."""
+
+
+def in_transaction(func=None, relaxed=False):
+    """Stands in for anvil.tables.in_transaction.
+
+    Like Anvil's, it re-runs the function when it raises TransactionConflict,
+    up to five tries, then lets the conflict out. Unlike Anvil's it does not
+    isolate anything: it rolls the tables back to the state before a failed
+    try, which is all the retry tests need.
+    """
+    if func is None:
+        return lambda f: in_transaction(f, relaxed=relaxed)
+
+    def wrapper(*args, **kwargs):
+        for attempt in range(5):
+            snapshot = FAKE_TABLES.snapshot()
+            try:
+                return func(*args, **kwargs)
+            except TransactionConflict:
+                FAKE_TABLES.restore(snapshot)
+                if attempt == 4:
+                    raise
+        raise AssertionError("unreachable")
+
+    return wrapper
+
+
 def _get_user(*_args, **_kwargs):
     return _CURRENT["user"]
 
@@ -98,6 +127,8 @@ def _install_anvil_stubs():
     server.registrations = _REGISTRATIONS
 
     tables.app_tables = FAKE_TABLES
+    tables.in_transaction = in_transaction
+    tables.TransactionConflict = TransactionConflict
 
     users.get_user = _get_user
     users.AuthenticationFailed = AuthenticationFailed
