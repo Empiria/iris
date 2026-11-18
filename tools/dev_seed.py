@@ -57,6 +57,8 @@ DEV_VDO_ORIGIN = "http://127.0.0.1:3030"
 DEV_VDO_PROFILE = (
     "ssq=-1&sharperscreen&rbr=50000&trb=50000&crb&codec=av1,vp9,vp8,h264&q=0"
 )
+# The one extra profile key the profile e2e tests save, so the admin page accepts it.
+DEV_EXTRA_KEYS = "iristestparam"
 
 # The permanent room the local stack always has. tests/e2e/test_permanent_room.py
 # repeats these values, and a unit test keeps the two copies equal. All of them are
@@ -152,6 +154,7 @@ def seed_join_room(app_tables) -> str:
         result = "updated"
     _put_setting(app_tables, "vdo_origin", DEV_VDO_ORIGIN)
     _put_setting(app_tables, "vdo_profile", DEV_VDO_PROFILE)
+    _put_setting(app_tables, "vdo_profile_extra_keys", DEV_EXTRA_KEYS)
     return result
 
 
