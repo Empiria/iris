@@ -6,7 +6,7 @@ any browser, so a method that writes authorises inside its own body.
 """
 
 import anvil.server
-import anvil.users  # pyright: ignore[reportMissingImports]  # the Users service arrives with plan 02-03
+import anvil.users
 
 
 class StaffOnly(Exception):

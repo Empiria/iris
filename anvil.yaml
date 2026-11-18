@@ -37,6 +37,38 @@ db_schema:
       admin_ui: {width: 200, order: 1}
       type: string
     title: setting
+  users:
+    client: none
+    server: full
+    columns:
+    - name: email
+      admin_ui: {width: 200, order: 0}
+      type: string
+    - name: enabled
+      admin_ui: {width: 100, order: 1}
+      type: bool
+    - name: last_login
+      admin_ui: {width: 200, order: 2}
+      type: datetime
+    - name: password_hash
+      admin_ui: {width: 200, order: 3}
+      type: string
+    - name: n_password_failures
+      admin_ui: {width: 200, order: 4}
+      type: number
+    - name: confirmed_email
+      admin_ui: {width: 100, order: 5}
+      type: bool
+    - name: signed_up
+      admin_ui: {width: 200, order: 6}
+      type: datetime
+    - name: remembered_logins
+      admin_ui: {width: 200, order: 7}
+      type: simpleObject
+    - name: is_staff
+      admin_ui: {width: 100, order: 8}
+      type: bool
+    title: Users
 dependencies:
 - dep_id: dep_kdiw29fnbu4q
   resolution_hints: {app_id: 3PIDO5P3H4VPEMPL, name: routing, package_name: routing}
@@ -58,5 +90,21 @@ services:
 - client_config: {}
   server_config: {}
   source: /runtime/services/anvil/secrets.yml
+- client_config:
+    allow_signup: false
+    confirm_email: false
+    enable_automatically: true
+    use_email: true
+    allow_remember_me: true
+    remember_me_days: 30
+    require_secure_passwords: false
+    share_login_status: false
+    use_token: false
+    use_google: false
+    use_facebook: false
+    use_microsoft: false
+    use_saml: false
+  server_config: {user_table: users}
+  source: /runtime/services/anvil/users.yml
 startup: {module: startup, type: module}
 startup_form: null
