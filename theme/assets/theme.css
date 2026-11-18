@@ -109,3 +109,13 @@ a {
   color: var(--iris-on-surface);
   font-weight: 700;
 }
+
+.iris-subheading {
+  margin: 0 0 var(--iris-space-4);
+  font-size: 1.25rem;
+}
+
+.iris-card + .iris-card,
+.iris-card .iris-card {
+  margin-top: var(--iris-space-6);
+}

@@ -23,6 +23,27 @@
     <p class="iris-lede" anvil:dom-node="signed_in_as"></p>
     <button type="button" class="iris-button" anvil:dom-node="signout_button"
             anvil:on-dom:click="self._on_sign_out">Sign out</button>
-    <div anvil:dom-node="staff_tools"></div>
+    <div anvil:dom-node="staff_tools">
+      <section class="iris-card" anvil:dom-node="create_card">
+        <h2 class="iris-subheading">New one-off meeting</h2>
+        <label class="iris-field">Meeting name (optional)
+          <input class="iris-input" type="text" maxlength="80"
+                 anvil:dom-node="title_input">
+        </label>
+        <button type="button" class="iris-button iris-button-primary"
+                anvil:dom-node="create_button"
+                anvil:on-dom:click="self._on_create">Create link</button>
+        <p class="iris-message" role="alert" anvil:dom-node="create_message" hidden></p>
+        <div anvil:dom-node="result_box" hidden>
+          <label class="iris-field">Meeting link
+            <input class="iris-input" type="text" readonly
+                   anvil:dom-node="link_output">
+          </label>
+          <button type="button" class="iris-button" anvil:dom-node="copy_button"
+                  anvil:on-dom:click="self._on_copy">Copy link</button>
+          <p class="iris-message" role="status" anvil:dom-node="copy_message" hidden></p>
+        </div>
+      </section>
+    </div>
   </section>
 </main>
