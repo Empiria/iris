@@ -3,14 +3,72 @@ import datetime
 import anvil.server
 from anvil.tables import app_tables
 
-from iris.services import permissions, slugs  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import passphrase, permissions, slugs  # pyright: ignore[reportAttributeAccessIssue]
 from iris.services.model.setting import Setting
 
 _SLUG_ATTEMPTS = 10
 
+# D-9: this many wrong passphrases in a row lock a room's unlock for a while.
+UNLOCK_LIMIT = 10
+UNLOCK_LOCK_MINUTES = 5
+
+_HEX = "0123456789abcdef"
+# vdo.ninja passwords run 1 to 49 characters. 24 hex characters is 96 bits.
+_VDO_PASSWORD_LENGTH = 24
+
+
+def _now():
+    """The current time, naive and in UTC (the server's clock). Tests patch this."""
+    return datetime.datetime.now()
+
+
+def _verifier():
+    """The server-only `verifier` module, loaded by name when first needed.
+
+    This file loads in the browser too, where `verifier` does not exist, and
+    `anvil validate` rejects a static import of it from client_code. Only server
+    methods call this, so the browser never reaches it.
+    """
+    return __import__("iris.verifier", fromlist=["verifier"])
+
+
+def _naive_utc(moment):
+    """`moment` as a naive UTC datetime, so stored and current times compare.
+
+    A datetime column can come back timezone-aware, and Python refuses to
+    compare an aware time with a naive one.
+    """
+    offset = moment.utcoffset()
+    if offset is None:
+        return moment
+    return moment.replace(tzinfo=None) - offset
+
+
+def _normalise_input(passphrase_text):
+    """(normalised, None) for a usable input, else (None, reason).
+
+    The reason is "empty" for a non-string or blank input and "incorrect" for
+    one over the length cap. Neither is hashed, and no text is carried out.
+    """
+    if not isinstance(passphrase_text, str):
+        return None, "empty"
+    try:
+        return passphrase.normalise(passphrase_text), None
+    except ValueError:
+        if len(passphrase_text) > passphrase.MAX_INPUT:
+            return None, "incorrect"
+        return None, "empty"
+
+
+def _store_attempts(row, failed, locked_until):
+    """Save the failed-unlock count and the lock time on a room row."""
+    changes = {"failed_unlocks": failed, "locked_until": locked_until}
+    row.update(**changes)
+    row.save()
+
 
 class Room(app_tables.room.Row, buffered=True, attrs=True):
-    """A meeting room. Both methods return plain dicts, not rows.
+    """A meeting room. Its methods return plain dicts, not rows.
 
     The `room` table has no client access, so a client could not read a returned
     row. The dict carries only the fields the caller may see.
@@ -23,7 +81,9 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
 
         Public by design: it is how a meeting link is opened. It returns None
         for a slug no staff member created, and for an inactive row, so an
-        invented slug releases no vdo_room.
+        invented slug releases no vdo_room. A permanent room releases only that
+        it exists and is locked: its vdo_room, title and password come out of
+        `unlock`, after the passphrase checks.
         """
         slug = slugs.normalise(slug)
         if not slugs.looks_like_slug(slug):
@@ -31,8 +91,11 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         row = app_tables.room.get(slug=slug)
         if row is None or row["active"] is not True:
             return None
+        if row["kind"] == "permanent":
+            return {"kind": "permanent", "locked": True}
         config = Setting.vdo_config()
         return {
+            "kind": "one-off",
             "vdo_room": row["vdo_room"],
             "title": row["title"],
             "origin": config["origin"],
@@ -55,7 +118,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
                 break
         if slug is None:
             raise RuntimeError("Could not find a free slug")
-        # The table has no uniqueness constraint, so two staff creating links
+        # The table has no uniqueness constraint, so two admins creating links
         # at the same instant could in theory draw the same slug. At 31 ** 8
         # slugs the odds are negligible.
         app_tables.room.add_row(
@@ -68,3 +131,103 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
             created=datetime.datetime.now(),
         )
         return {"slug": slug, "title": title}
+
+    @anvil.server.server_method
+    @classmethod
+    def create_permanent(cls, slug_text, title=""):
+        """Create a permanent room. Admins only.
+
+        Returns the slug, the title and the generated passphrase. The passphrase
+        is returned this once: only its slow hash is stored, so nothing here can
+        show it again. Raises ValueError (slug rules, or "That name is taken.").
+        """
+        user = permissions.require_staff()
+        slug = slugs.clean_room_slug(slug_text)
+        # Duplicates are refused across both kinds of room, and across inactive
+        # rows. The table has no uniqueness constraint, so two admins creating
+        # the same name at the same instant could both pass; the odds are low
+        # and a later list would show both.
+        if app_tables.room.get(slug=slug) is not None:
+            raise ValueError("That name is taken.")
+        phrase = passphrase.generate()
+        record = _verifier().hash_passphrase(passphrase.normalise(phrase))
+        now = _now()
+        row = app_tables.room.add_row(
+            slug=slug,
+            vdo_room=slugs.new_vdo_room(),
+            title=title,
+            kind="permanent",
+            active=True,
+            created_by=user["email"],
+            created=now,
+            updated=now,
+            verifier=record["verifier"],
+            verifier_salt=record["verifier_salt"],
+            kdf_iterations=record["kdf_iterations"],
+            vdo_password=slugs.random_string(_HEX, _VDO_PASSWORD_LENGTH),
+            failed_unlocks=0,
+            locked_until=None,  # pyright: ignore[reportArgumentType]
+        )
+        row.save()
+        return {"slug": slug, "title": title, "passphrase": phrase}
+
+    @anvil.server.server_method
+    @classmethod
+    def unlock(cls, slug, passphrase_text):
+        """Check a passphrase for a permanent room and release its join info.
+
+        Public by design: a client without an account unlocks a room here. It
+        returns {"ok": True, "found": {...}} on a match, otherwise
+        {"ok": False, "reason": ...} with a reason of "missing", "empty",
+        "throttled" or "incorrect". The reasons carry no input text. An empty
+        input, an oversized one and a locked room return before any hashing, and
+        10 wrong attempts in a row lock the room for 5 minutes.
+        """
+        slug = slugs.normalise(slug) if isinstance(slug, str) else ""
+        if not slugs.looks_like_slug(slug):
+            return {"ok": False, "reason": "missing"}
+        normalised, refusal = _normalise_input(passphrase_text)
+        if refusal is not None:
+            return {"ok": False, "reason": refusal}
+
+        row = app_tables.room.get(slug=slug)
+        if row is None or row["active"] is not True or row["kind"] != "permanent":
+            return {"ok": False, "reason": "missing"}
+
+        now = _now()
+        failed = row["failed_unlocks"] or 0
+        locked_until = row["locked_until"]
+        if locked_until is not None:
+            if _naive_utc(locked_until) > now:
+                return {"ok": False, "reason": "throttled"}
+            # The lock has run out: the next guess starts a fresh count.
+            failed = 0
+
+        record = {
+            "verifier": row["verifier"],
+            "verifier_salt": row["verifier_salt"],
+            "kdf_iterations": row["kdf_iterations"],
+        }
+        if not _verifier().check_passphrase(normalised, record):
+            failed += 1
+            lock = None
+            if failed >= UNLOCK_LIMIT:
+                lock = now + datetime.timedelta(minutes=UNLOCK_LOCK_MINUTES)
+            _store_attempts(row, failed, lock)
+            return {"ok": False, "reason": "incorrect"}
+
+        if failed or locked_until is not None:
+            _store_attempts(row, 0, None)
+        config = Setting.vdo_config()
+        return {
+            "ok": True,
+            "found": {
+                "vdo_room": row["vdo_room"],
+                "password": row["vdo_password"],
+                "title": row["title"],
+                "origin": config["origin"],
+                "profile": config["profile"],
+                "salt": config["salt"],
+                "kind": "permanent",
+            },
+        }

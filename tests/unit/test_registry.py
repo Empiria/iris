@@ -20,13 +20,21 @@ ROOT = Path(__file__).resolve().parents[2]
 # Callables any browser may call. ping: the stack health check. staff_status:
 # reports only the caller's own sign-in state (plan 02-03). lookup_room: public
 # by design, returns a room only for an active recorded slug (JOIN-01, JOIN-04),
-# released to anyone holding the link (plan 02-05).
-PUBLIC_CALLABLES = {"ping", "staff_status", "lookup_room"}
+# released to anyone holding the link (plan 02-05). unlock_room: clients without
+# accounts unlock a permanent room; checks the passphrase and is throttled
+# (plan 03-04).
+PUBLIC_CALLABLES = {"ping", "staff_status", "lookup_room", "unlock_room"}
 
 # Server methods any browser may call. Room.lookup is how a meeting link opens
 # and releases nothing for a slug no staff member created. Setting methods read
 # only the vdo.ninja keys that a valid link releases anyway (plan 02-02).
-PUBLIC_SERVER_METHODS = {"Room.lookup", "Setting.vdo_config", "Setting.get_value"}
+# Room.unlock is the model side of unlock_room (plan 03-04).
+PUBLIC_SERVER_METHODS = {
+    "Room.lookup",
+    "Room.unlock",
+    "Setting.vdo_config",
+    "Setting.get_value",
+}
 
 # Routes and well-known endpoints any browser may fetch. None yet.
 PUBLIC_ROUTES = set()

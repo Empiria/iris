@@ -179,3 +179,163 @@ def test_clean_title_caps_the_length_at_80(meetings):
 def test_clean_title_rejects_non_text(meetings, raw):
     with pytest.raises(ValueError, match="Title must be text"):
         meetings.clean_title(raw)
+
+
+@pytest.fixture
+def admin(as_user, make_user):
+    user = make_user(email="admin@example.test", is_staff=True)
+    as_user(user)
+    return user
+
+
+# --- create_permanent_room ------------------------------------------------
+
+
+@pytest.fixture
+def fast_kdf(load_client_module, meetings, monkeypatch):
+    import importlib
+
+    monkeypatch.setattr(importlib.import_module("iris.verifier"), "ITERATIONS", 1000)
+
+
+def _callable(name):
+    found = [
+        r for r in anvil.server.registrations if r.kind == "callable" and r.name == name
+    ]
+    assert len(found) == 1
+    return found[0]
+
+
+def test_create_permanent_room_requires_an_admin(meetings, load_client_module):
+    permissions = load_client_module("services/permissions")
+
+    registration = _callable("create_permanent_room")
+
+    assert registration.kwargs.get("require_user") is permissions.is_staff
+
+
+def test_create_permanent_room_returns_slug_title_and_passphrase(
+    meetings, tables, admin, fast_kdf
+):
+    result = meetings.create_permanent_room("Acme Board", "Acme quarterly")
+
+    assert set(result) == {"slug", "title", "passphrase"}
+    assert result["slug"] == "acme-board"
+    assert result["title"] == "Acme quarterly"
+    assert len(result["passphrase"]) == 14
+    row = tables.room.rows[0]
+    assert row["kind"] == "permanent"
+    assert row["created_by"] == "admin@example.test"
+
+
+def test_create_permanent_room_cleans_the_title(meetings, tables, admin, fast_kdf):
+    result = meetings.create_permanent_room("Acme Board", "  a\nb  ")
+
+    assert result["title"] == "a b"
+    assert tables.room.rows[0]["title"] == "a b"
+
+
+def test_create_permanent_room_title_defaults_to_empty(
+    meetings, tables, admin, fast_kdf
+):
+    assert meetings.create_permanent_room("Acme Board")["title"] == ""
+
+
+def test_create_permanent_room_the_reply_holds_no_room_secrets(
+    meetings, tables, admin, fast_kdf
+):
+    result = meetings.create_permanent_room("Acme Board", "x")
+    row = tables.room.rows[0]
+
+    assert row["vdo_room"] not in repr(result)
+    assert row["vdo_password"] not in repr(result)
+    assert row["verifier"] not in repr(result)
+
+
+def test_create_permanent_room_passes_a_slug_message_on(
+    meetings, tables, admin, fast_kdf
+):
+    with pytest.raises(ValueError, match="Use at least 3 characters"):
+        meetings.create_permanent_room("ab")
+
+
+def test_create_permanent_room_refuses_a_taken_name(meetings, tables, admin, fast_kdf):
+    meetings.create_permanent_room("Acme Board")
+
+    with pytest.raises(ValueError, match="That name is taken."):
+        meetings.create_permanent_room("acme-board")
+
+    assert len(tables.room.rows) == 1
+
+
+def test_create_permanent_room_refuses_a_one_off_slug(
+    meetings, tables, admin, fast_kdf
+):
+    made = meetings.create_one_off_link("")
+
+    with pytest.raises(ValueError, match="That name is taken."):
+        meetings.create_permanent_room(made["slug"])
+
+
+def test_create_permanent_room_refuses_non_text(meetings, tables, admin, fast_kdf):
+    with pytest.raises(ValueError):
+        meetings.create_permanent_room(None)
+
+    assert tables.room.rows == []
+
+
+def test_create_permanent_room_the_model_refuses_a_non_admin_caller(
+    meetings, tables, as_user, make_user, fast_kdf
+):
+    as_user(make_user(email="viewer@example.test", is_staff=False))
+
+    with pytest.raises(anvil.server.PermissionDenied):
+        meetings.create_permanent_room("Acme Board")
+
+    assert tables.room.rows == []
+
+
+# --- unlock_room (JOIN-02, JOIN-03, D-9) ----------------------------------
+
+
+def test_unlock_room_is_a_plain_public_callable(meetings):
+    assert "require_user" not in _callable("unlock_room").kwargs
+
+
+def test_unlock_room_right_then_wrong_for_an_anonymous_caller(
+    meetings, tables, admin, as_user, fast_kdf
+):
+    made = meetings.create_permanent_room("Acme Board", "Acme quarterly")
+    row = tables.room.rows[0]
+    as_user(None)
+
+    good = meetings.unlock_room("acme-board", made["passphrase"].upper())
+    bad = meetings.unlock_room("acme-board", "aaaa-bbbb-cccc")
+
+    assert good["ok"] is True
+    assert good["found"]["vdo_room"] == row["vdo_room"]
+    assert good["found"]["password"] == row["vdo_password"]
+    assert good["found"]["title"] == "Acme quarterly"
+    assert bad == {"ok": False, "reason": "incorrect"}
+
+
+def test_unlock_room_bad_input_types_are_plain_refusals(
+    meetings, tables, admin, as_user, fast_kdf
+):
+    meetings.create_permanent_room("Acme Board")
+    as_user(None)
+
+    assert meetings.unlock_room(None, "x") == {"ok": False, "reason": "missing"}
+    assert meetings.unlock_room(5, "x") == {"ok": False, "reason": "missing"}
+    assert meetings.unlock_room("acme-board", None) == {"ok": False, "reason": "empty"}
+    assert meetings.unlock_room("acme-board", 12) == {"ok": False, "reason": "empty"}
+
+
+def test_lookup_room_of_a_permanent_slug_is_locked_for_everyone(
+    meetings, tables, admin, as_user, fast_kdf
+):
+    meetings.create_permanent_room("Acme Board", "Secret client")
+
+    assert meetings.lookup_room("acme-board") == {"kind": "permanent", "locked": True}
+    as_user(None)
+    assert meetings.lookup_room("ACME-BOARD") == {"kind": "permanent", "locked": True}

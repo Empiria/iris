@@ -43,3 +43,32 @@ def create_one_off_link(title=""):
     carries the slug and title only: the separate vdo_room never leaves the server.
     """
     return Room.create_one_off(title=clean_title(title))
+
+
+@anvil.server.callable(require_user=permissions.is_staff)
+def create_permanent_room(slug, title=""):
+    """Create a permanent room with a readable slug and return its passphrase.
+
+    Admins only. The runtime enforces `require_user`, and `Room.create_permanent`
+    repeats the check. The reply carries the slug, the title and the generated
+    passphrase, which this call shows exactly once: the table keeps only a slow
+    hash. Slug problems raise ValueError with a message written for the person
+    who typed the name.
+    """
+    if not isinstance(slug, str):
+        raise ValueError("Enter a name for the room.")
+    return Room.create_permanent(slug, title=clean_title(title))
+
+
+@anvil.server.callable
+def unlock_room(slug, passphrase):
+    """Check a passphrase for a permanent room and return its join info.
+
+    Public on purpose: a client without an account opens a permanent room here.
+    The reply is {"ok": True, "found": {...}} for the right passphrase, or
+    {"ok": False, "reason": ...} otherwise. `Room.unlock` does the checking and
+    the throttling. The passphrase is never logged, stored or put in an error.
+    """
+    if not isinstance(slug, str):
+        return {"ok": False, "reason": "missing"}
+    return Room.unlock(slug, passphrase)

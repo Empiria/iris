@@ -58,13 +58,14 @@ def test_reply_holds_exactly_what_a_join_needs(meetings, tables):
 
     found = meetings.lookup_room(SLUG)
 
-    assert set(found) == {"vdo_room", "title", "origin", "profile", "salt"}
+    assert set(found) == {"vdo_room", "title", "origin", "profile", "salt", "kind"}
+    assert found["kind"] == "one-off"
     assert found["vdo_room"] == VDO_ROOM
     assert found["title"] == "Kickoff"
     assert found["origin"] == "https://vdo.ninja"
     assert found["profile"] == ""
     assert found["salt"] is None
-    for key in ("created_by", "kind", "active", "slug"):
+    for key in ("created_by", "active", "slug"):
         assert key not in found
 
 
@@ -166,3 +167,50 @@ def test_a_stored_origin_over_plain_http_is_refused(meetings, tables):
 
     assert "vdo_origin" in str(refused.value)
     assert "evil.example" not in str(refused.value)
+
+
+# --- permanent rooms ------------------------------------------------------
+
+
+def _permanent_row(tables, active=True):
+    return tables.room.add_row(
+        slug="acme-board",
+        vdo_room=VDO_ROOM,
+        title="Acme secret",
+        kind="permanent",
+        active=active,
+        created_by="admin@example.test",
+        vdo_password="0123456789abcdef01234567",
+        verifier="ab" * 32,
+    )
+
+
+def test_a_permanent_slug_returns_locked_and_nothing_else(meetings, tables):
+    _permanent_row(tables)
+
+    found = meetings.lookup_room("acme-board")
+
+    assert found == {"kind": "permanent", "locked": True}
+    assert VDO_ROOM not in repr(found)
+    assert "Acme secret" not in repr(found)
+
+
+@pytest.mark.parametrize("who", ["anonymous", "non-admin", "admin"])
+def test_a_permanent_slug_is_locked_for_every_caller(
+    meetings, tables, as_user, make_user, who
+):
+    _permanent_row(tables)
+    if who == "non-admin":
+        as_user(make_user(email="viewer@example.test", is_staff=False))
+    elif who == "admin":
+        as_user(make_user())
+    else:
+        as_user(None)
+
+    assert meetings.lookup_room("acme-board") == {"kind": "permanent", "locked": True}
+
+
+def test_an_inactive_permanent_room_returns_none(meetings, tables):
+    _permanent_row(tables, active=False)
+
+    assert meetings.lookup_room("acme-board") is None
