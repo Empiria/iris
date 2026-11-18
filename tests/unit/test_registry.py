@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # by design, returns a room only for an active recorded slug,
 # released to anyone holding the link. unlock_room: clients without
 # accounts unlock a permanent room; checks the passphrase and is throttled
-#.
+# .
 PUBLIC_CALLABLES = {"ping", "admin_status", "lookup_room", "unlock_room"}
 
 # Server methods any browser may call. Room.lookup is how a meeting link opens

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
+
 def user_message(error):
     """Return the message of a server error written for the person, or None.
 
