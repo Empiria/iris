@@ -26,7 +26,6 @@ package = false
 # the Anvil app's __init__.py, which pytest would otherwise import as a package
 # and which fails outside the Anvil runtime (it reads __path__ without defining it).
 addopts = "-ra --confcutdir=tests"
-base_url = "http://localhost:3030/"
 markers = [
     "e2e: drives a browser against the local stack",
 ]

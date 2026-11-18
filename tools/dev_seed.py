@@ -25,7 +25,7 @@ import create_staff  # a sibling in tools/, first on sys.path when run by path
 from anvil.tables import app_tables
 
 KEY = os.environ.get("IRIS_UPLINK_KEY", "dev-uplink")
-URL = os.environ.get("IRIS_UPLINK_URL", "ws://localhost:3030/_/uplink")
+URL = create_staff.uplink_url(os.environ)
 
 # How long to wait for the uplink to come up before giving up.
 CONNECT_TIMEOUT_S = 20

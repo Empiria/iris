@@ -12,8 +12,8 @@ A spike with VARIANTS also has variants/<variant>/ trees laid on top of that.
 
 The copy goes in the git-ignored .anvil/spikes/<name>/ and runs in a throwaway
 container on a loopback port with a fresh database, so the product tree and the
-stack on port 3030 are never touched. Host-only: it needs rootless podman and
-the iris-anvil-dev image from `just build`.
+stack are never touched. Host-only: it needs rootless podman and the
+iris-anvil-dev image from `just build`.
 
     uv run --script tools/spike.py list
     uv run --script tools/spike.py all

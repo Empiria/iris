@@ -7,6 +7,10 @@ explicit PLAYWRIGHT_BROWSERS_PATH still wins.
 `staff_login` and `non_staff_login` return `(email, password)` for the two local
 dev accounts. The first runs `tools/create_staff.py --dev`, which makes both and
 is safe to run again, so a second run in the same database passes.
+
+The stack's host port comes from IRIS_PORT (default 3030), like the justfile's
+`port` setting. There is no `base_url` in pyproject.toml: the `base_url` fixture
+below reads `--base-url`, then IRIS_URL, then IRIS_PORT.
 """
 
 import importlib.util
@@ -35,6 +39,14 @@ def _launcher_constants():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(scope="session")
+def base_url(request):
+    """The app URL: an explicit --base-url, else IRIS_URL, else the stack port."""
+    return request.config.getoption("base_url") or _launcher_constants().base_url(
+        os.environ
+    )
 
 
 @pytest.fixture(scope="session")
@@ -92,7 +104,7 @@ def uplink():
 
     import anvil.server
 
-    url = os.environ.get("IRIS_UPLINK_URL", "ws://localhost:3030/_/uplink")
+    url = _launcher_constants().uplink_url(os.environ)
     key = os.environ.get("IRIS_UPLINK_KEY", "dev-uplink")
     # The uplink retries a dropped connection on a non-daemon thread, which would
     # keep the test process alive after the run.

@@ -308,6 +308,43 @@ def test_default_connection_is_the_local_dev_uplink(launcher):
     )
 
 
+def test_the_stack_port_defaults_to_3030(launcher):
+    assert launcher.stack_port({}) == 3030
+    assert launcher.stack_port({"IRIS_PORT": ""}) == 3030
+
+
+def test_the_stack_port_comes_from_iris_port(launcher):
+    assert launcher.stack_port({"IRIS_PORT": "3040"}) == 3040
+
+
+@pytest.mark.parametrize("value", ["abc", "0", "65536", "30 40", "-1", "3040/tcp"])
+def test_a_bad_stack_port_is_refused(launcher, value):
+    with pytest.raises(ValueError):
+        launcher.stack_port({"IRIS_PORT": value})
+
+
+def test_the_urls_follow_the_stack_port(launcher):
+    env = {"IRIS_PORT": "3040"}
+    assert launcher.uplink_url(env) == "ws://localhost:3040/_/uplink"
+    assert launcher.base_url(env) == "http://localhost:3040/"
+    assert launcher.resolve_connection(env)[0] == "ws://localhost:3040/_/uplink"
+
+
+def test_the_urls_default_to_port_3030(launcher):
+    assert launcher.uplink_url({}) == "ws://localhost:3030/_/uplink"
+    assert launcher.base_url({}) == "http://localhost:3030/"
+
+
+def test_an_explicit_url_beats_the_port(launcher):
+    env = {
+        "IRIS_PORT": "3040",
+        "IRIS_URL": "http://localhost:4000/",
+        "IRIS_UPLINK_URL": "ws://localhost:4000/_/uplink",
+    }
+    assert launcher.base_url(env) == "http://localhost:4000/"
+    assert launcher.uplink_url(env) == "ws://localhost:4000/_/uplink"
+
+
 @pytest.mark.parametrize(
     "url", ["ws://localhost:3030/_/uplink", "ws://127.0.0.1:3031/_/uplink"]
 )

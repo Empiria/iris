@@ -5,8 +5,14 @@
 
 vault := env_var_or_default("MNEMOSYNE_VAULT", env_var("HOME") + "/projects/empiria/mnemosyne")
 
-base_url := env_var_or_default("IRIS_URL", "http://localhost:3030/")
-uplink_url := env_var_or_default("IRIS_UPLINK_URL", "ws://localhost:3030/_/uplink")
+# The host port the stack is published on (loopback only). The app inside the
+# container always listens on 3030. Override per call with `just port=3040 up`
+# (the setting goes before the recipe name), or with the IRIS_PORT environment
+# variable. It is exported to every recipe, so a nested `just up` and the python
+# tools see the same value.
+port := env_var_or_default("IRIS_PORT", "3030")
+base_url := env_var_or_default("IRIS_URL", "http://localhost:" + port + "/")
+uplink_url := env_var_or_default("IRIS_UPLINK_URL", "ws://localhost:" + port + "/_/uplink")
 
 # How many times the stack guard retries (2 s apart) before it gives up.
 stack_retries := env_var_or_default("IRIS_STACK_RETRIES", "30")
@@ -20,7 +26,7 @@ package := `sed -n 's/^package_name: *//p' anvil.yaml`
 img := "iris-anvil-dev"
 # One container and database per checkout, named after its directory, so a
 # stale container left by another checkout or worktree can't block this one.
-# IRIS_CONTAINER overrides the name. Only one stack can hold port 3030 at a time.
+# IRIS_CONTAINER overrides the name. Only one stack can hold a given host port at a time (see `port` above).
 ctr := env_var_or_default("IRIS_CONTAINER", "iris-anvil-" + file_name(justfile_directory()))
 vol := ctr + "-data"
 
@@ -28,6 +34,7 @@ vol := ctr + "-data"
 # the checkout so two checkouts never share one fixed name.
 spike_ctr := env_var_or_default("IRIS_SPIKE_CONTAINER", ctr + "-spike")
 
+export IRIS_PORT := port
 export IRIS_UPLINK_URL := uplink_url
 export IRIS_SPIKE_CONTAINER := spike_ctr
 
@@ -126,7 +133,7 @@ build: deps (_need-podman "build")
     podman build -t {{ img }} .anvil/build
     rm -rf .anvil/build
 
-# [host] Start the stack on :3030, or resume the stopped one (the DB survives).
+# [host] Start the stack on the host port (default 3030), or resume the stopped one (the DB survives).
 up: (_need-podman "up")
     #!/usr/bin/env bash
     set -euo pipefail
@@ -137,7 +144,7 @@ up: (_need-podman "up")
         # The --dep-id flags come from anvil.yaml, so ids are never typed twice.
         # After a package_name or dep_id change in anvil.yaml, run `just fresh`.
         [ -n "{{ package }}" ] || { echo "up: no package_name in anvil.yaml"; exit 1; }
-        podman run -d --name {{ ctr }} -p 127.0.0.1:3030:3030 \
+        podman run -d --name {{ ctr }} -p 127.0.0.1:{{ port }}:3030 \
             -v "{{ justfile_directory() }}:/srv/{{ package }}:ro,z" -v {{ vol }}:/data \
             {{ img }} --app /srv/{{ package }} $(uv run --script tools/anvil_deps.py --dep-id-args)
     fi
@@ -177,7 +184,7 @@ seed: _need-stack
     uv run --script tools/dev_seed.py
 
 # [host] Create the first staff account on the local stack: `just create-staff --dev` or `just create-staff you@example.com`.
-# Needs the stack on port 3030, so it is host-only like seed. A hosted app runs scripts/CreateStaff.py from the Anvil editor instead.
+# Needs the stack up (on `port`), so it is host-only like seed. A hosted app runs scripts/CreateStaff.py from the Anvil editor instead.
 create-staff *args: _need-stack
     uv run --script tools/create_staff.py {{ args }}
 
@@ -274,12 +281,12 @@ host-check: (_need-podman "host-check")
     echo "first 200 after ${boot_secs} s"
 
     begin "the port is published on loopback only"
-    port="$(podman port {{ ctr }})"
-    echo "$port"
-    [ "$port" = "3030/tcp -> 127.0.0.1:3030" ] || fail "expected 3030/tcp -> 127.0.0.1:3030"
-    listen="$(ss -ltnH 'sport = :3030')"
+    published="$(podman port {{ ctr }})"
+    echo "$published"
+    [ "$published" = "3030/tcp -> 127.0.0.1:{{ port }}" ] || fail "expected 3030/tcp -> 127.0.0.1:{{ port }}"
+    listen="$(ss -ltnH 'sport = :{{ port }}')"
     echo "$listen"
-    if grep -qE '(0\.0\.0\.0|\[::\]|\*):3030' <<<"$listen"; then fail "port 3030 listens beyond loopback"; fi
+    if grep -qE '(0\.0\.0\.0|\[::\]|\*):{{ port }}' <<<"$listen"; then fail "port {{ port }} listens beyond loopback"; fi
 
     begin "the server got the app path and dependency ids from anvil.yaml"
     cmd="$(podman inspect {{ ctr }} --format '{{{{json .Config.Cmd}}')"
