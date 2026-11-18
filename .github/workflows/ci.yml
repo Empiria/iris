@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    # `just verify` runs lint, the format check, anvil-pyright, anvil validate,
+    # leftovers, the SPDX check and the unit tests. The e2e suite needs the
+    # local podman stack, so it stays host-only and is not run here.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - uses: extractions/setup-just@v3
+      # Cache the dependency apps `just deps` fetches. The key follows anvil.yaml,
+      # which holds the pinned tags.
+      - uses: actions/cache@v4
+        with:
+          path: .anvil
+          key: anvil-deps-${{ hashFiles('anvil.yaml') }}
+      - name: Install the dev tools
+        run: uv sync --group dev
+      # uv run puts the project's ruff and anvil-pyright on PATH.
+      - name: Verify
+        run: uv run just verify

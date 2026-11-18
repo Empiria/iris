@@ -92,6 +92,10 @@ lint:
 format:
     ruff format .
 
+# Fail if any file needs formatting. Changes nothing.
+format-check:
+    ruff format --check .
+
 # Type-check with anvil-pyright.
 check: deps
     anvil-pyright .
@@ -119,8 +123,8 @@ spdx:
 density:
     @python3 "{{ vault }}/technologies/python/tools/comment_ratio.py" client_code server_code
 
-# The whole static gate. Run before every commit.
-verify: lint check validate leftovers spdx
+# The whole gate: static checks plus the hermetic unit tests. Run before every commit. CI runs this too.
+verify: lint format-check check validate leftovers spdx unit
 
 # Hermetic unit tests. No stack needed.
 unit:
