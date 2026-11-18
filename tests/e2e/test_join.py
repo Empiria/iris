@@ -110,7 +110,8 @@ def test_unknown_slug_says_no_such_meeting(page: Page):
     expect(page.get_by_role("heading", name="No such meeting")).to_be_visible(
         timeout=FIRST_LOAD_MS
     )
-    expect(page.get_by_label("Your name")).to_have_count(0)
+    # The form is in the page but hidden, and a label query still finds it.
+    expect(page.get_by_label("Your name")).to_be_hidden()
     assert not page.get_by_text(ERROR_BANNER).is_visible()
 
 
