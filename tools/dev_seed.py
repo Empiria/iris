@@ -5,12 +5,11 @@
 # ///
 """Seed the local stack over the dev uplink.
 
-Phase 1 has no tables, so the round trip is the whole job here: connect to the
-running app server, call the ping callable, expect "pong" and disconnect. That
-is how the roadmap's "just seed" criterion is met for this phase.
-
-Once the app has tables, rows go in from this script through app_tables on this
-privileged uplink. Later phases add their seed data here.
+Connect to the running app server, call the ping callable, expect "pong", then
+seed the rows the local stack needs. The app has tables now, so rows go in from
+this script on the privileged uplink. Today that is the two dev accounts (a staff
+user and a non-staff viewer, made by the same code as `just create-staff --dev`).
+Later phases add their seed data here, each in its own function.
 
 The uplink key is a local-only value that matches the Containerfile. It is never
 printed.
@@ -21,6 +20,9 @@ import sys
 import threading
 
 import anvil.server
+import anvil.users
+import create_staff  # a sibling in tools/, first on sys.path when run by path
+from anvil.tables import app_tables
 
 KEY = os.environ.get("IRIS_UPLINK_KEY", "dev-uplink")
 URL = os.environ.get("IRIS_UPLINK_URL", "ws://localhost:3030/_/uplink")
@@ -55,6 +57,24 @@ def _connect() -> bool:
     return True
 
 
+def _seed_accounts() -> None:
+    """Ensure the dev staff and viewer accounts. Safe to run again."""
+    staff = create_staff.ensure_staff(
+        create_staff.DEV_STAFF_EMAIL,
+        create_staff.DEV_STAFF_PASSWORD,
+        anvil.server,
+        app_tables,
+    )
+    print(f"seed: staff account ready ({create_staff.DEV_STAFF_EMAIL}, {staff})")
+    viewer = create_staff.ensure_viewer(
+        create_staff.DEV_VIEWER_EMAIL,
+        create_staff.DEV_VIEWER_PASSWORD,
+        anvil.users,
+        app_tables,
+    )
+    print(f"seed: viewer account ready ({create_staff.DEV_VIEWER_EMAIL}, {viewer})")
+
+
 def main() -> int:
     # anvil-uplink retries a dropped connection on a non-daemon thread, which
     # keeps the process alive after the work is done. Turn that off.
@@ -67,6 +87,7 @@ def main() -> int:
             print(f"seed: unexpected ping reply {reply!r}")
             return 1
         print("seed: uplink round trip ok (ping -> pong)")
+        _seed_accounts()
     finally:
         anvil.server.disconnect()
     return 0
