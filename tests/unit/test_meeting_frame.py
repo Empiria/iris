@@ -49,3 +49,20 @@ def test_join_hosts_the_frame_hidden_and_swaps_it_in():
     assert "handoff.start(" in JOIN_PY
     assert "self.meeting_frame" in JOIN_PY
     assert 'dom_nodes["frame_shell"].hidden = False' in JOIN_PY
+
+
+def test_e2e_iphone_agent_is_a_redirect_browser_and_desktop_chromium_embeds():
+    """Keeps tests/e2e/test_join_iframe.py honest if the recorded decision changes."""
+    from iris.services import handoff  # pyright: ignore[reportAttributeAccessIssue]
+
+    text = (CLIENT.parent / "tests" / "e2e" / "test_join_iframe.py").read_text()
+    found = re.search(r'IPHONE_UA = \(\s*"(.*?)"\s*"(.*?)"\s*\)', text, re.DOTALL)
+    assert found is not None
+    iphone = found.group(1) + found.group(2)
+    chromium = (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "HeadlessChrome/120.0.0.0 Safari/537.36"
+    )
+
+    assert handoff.method_for(iphone) == "redirect"
+    assert handoff.method_for(chromium) == "iframe"
