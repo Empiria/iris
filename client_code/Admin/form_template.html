@@ -1,89 +1,16 @@
 <main class="iris-page">
   <anvil-component name="loading_card" type="form:StatusCard"
                    prop:text="Checking your session"></anvil-component>
-  <section class="iris-card" anvil:dom-node="signin_card" hidden>
-    <h1 class="iris-heading">Admin sign-in</h1>
-    <form anvil:dom-node="signin_form" anvil:on-dom:submit="self._on_submit">
-      <anvil-component name="email_input" type="form:TextField"
-                       prop:label="Email" prop:input_type="email"
-                       prop:autocomplete="username"></anvil-component>
-      <anvil-component name="password_input" type="form:TextField"
-                       prop:label="Password" prop:input_type="password"
-                       prop:autocomplete="current-password"></anvil-component>
-      <anvil-component name="signin_message" type="form:Message" prop:level="alert"></anvil-component>
-      <button type="submit" class="iris-button iris-button-primary"
-              anvil:dom-node="signin_button">Sign in</button>
-    </form>
-    <anvil-component name="forgot_password" type="form:ForgotPassword"></anvil-component>
-  </section>
+  <anvil-component name="signin_card" type="form:SignInCard"></anvil-component>
   <section class="iris-card" anvil:dom-node="signed_in_card" hidden>
     <h1 class="iris-heading">Admin</h1>
     <p class="iris-lede" anvil:dom-node="signed_in_as"></p>
     <button type="button" class="iris-button" anvil:dom-node="signout_button"
             anvil:on-dom:click="self._on_sign_out">Sign out</button>
     <div anvil:dom-node="admin_tools">
-      <section class="iris-card" anvil:dom-node="create_card">
-        <h2 class="iris-subheading">New meeting</h2>
-        <fieldset class="iris-choice">
-          <legend class="iris-choice-legend">Kind of meeting</legend>
-          <label class="iris-choice-option">
-            <input type="radio" name="meeting_kind" value="one-off" checked
-                   anvil:dom-node="kind_one_off"
-                   anvil:on-dom:change="self._on_kind_change"> One-off link
-          </label>
-          <label class="iris-choice-option">
-            <input type="radio" name="meeting_kind" value="permanent"
-                   anvil:dom-node="kind_permanent"
-                   anvil:on-dom:change="self._on_kind_change"> Permanent room
-          </label>
-        </fieldset>
-        <anvil-component name="room_name_input" type="form:TextField"
-                         prop:label="Room name, used in the link"
-                         prop:maxlength="64" prop:private="True"></anvil-component>
-        <anvil-component name="title_input" type="form:TextField"
-                         prop:label="Meeting name (optional)"
-                         prop:maxlength="80"></anvil-component>
-        <button type="button" class="iris-button iris-button-primary"
-                anvil:dom-node="create_button"
-                anvil:on-dom:click="self._on_create">Create link</button>
-        <anvil-component name="create_message" type="form:Message" prop:level="alert"></anvil-component>
-        <div anvil:dom-node="result_box" hidden>
-          <anvil-component name="link_field" type="form:CopyField"
-                           prop:label="Meeting link" prop:button_text="Copy link"
-                           prop:copied_text="Link copied."
-                           prop:failed_text="Copy failed. The link is selected, so press Ctrl+C or Cmd+C."></anvil-component>
-          <div class="iris-secret" anvil:dom-node="passphrase_box" hidden>
-            <anvil-component name="passphrase_field" type="form:CopyField"
-                             prop:label="Passphrase" prop:button_text="Copy passphrase"
-                             prop:copied_text="Passphrase copied."
-                             prop:failed_text="Copy failed. The passphrase is selected, so press Ctrl+C or Cmd+C."
-                             prop:secret="True"></anvil-component>
-            <p class="iris-note">Copy this passphrase now and store it somewhere safe. It won't be shown again.</p>
-          </div>
-        </div>
-      </section>
-      <section class="iris-card" anvil:dom-node="rooms_card">
-        <h2 class="iris-subheading">Rooms</h2>
-        <p class="iris-lede" anvil:dom-node="rooms_empty" hidden>No rooms yet. Create one above.</p>
-        <div class="iris-room-list" anvil:dom-node="rooms_list">
-          <anvil-component type="RepeatingPanel" name="rooms_panel" prop:item_template="RoomRow"></anvil-component>
-        </div>
-        <anvil-component name="rooms_message" type="form:Message" prop:level="alert"></anvil-component>
-      </section>
-      <section class="iris-card" anvil:dom-node="profile_card">
-        <h2 class="iris-subheading">Call settings</h2>
-        <p class="iris-lede">vdo.ninja parameters added to every meeting link, for
-          example <code>&amp;quality=1</code>. Leave it empty for plain vdo.ninja.</p>
-        <label class="iris-field">vdo.ninja parameters
-          <textarea class="iris-input iris-textarea" rows="4" maxlength="2000"
-                    spellcheck="false" autocapitalize="off" autocomplete="off"
-                    anvil:dom-node="profile_input"></textarea>
-        </label>
-        <button type="button" class="iris-button iris-button-primary"
-                anvil:dom-node="profile_save"
-                anvil:on-dom:click="self._on_profile_save">Save settings</button>
-        <anvil-component name="profile_message" type="form:Message"></anvil-component>
-      </section>
+      <anvil-component name="create_meeting" type="form:CreateMeeting"></anvil-component>
+      <anvil-component name="rooms_list" type="form:RoomsList"></anvil-component>
+      <anvil-component name="call_settings" type="form:CallSettings"></anvil-component>
     </div>
   </section>
 </main>

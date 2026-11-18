@@ -1,0 +1,43 @@
+---
+custom_component: true
+---
+<section class="iris-card">
+  <h2 class="iris-subheading">New meeting</h2>
+  <fieldset class="iris-choice">
+    <legend class="iris-choice-legend">Kind of meeting</legend>
+    <label class="iris-choice-option">
+      <input type="radio" name="meeting_kind" value="one-off" checked
+             anvil:dom-node="kind_one_off"
+             anvil:on-dom:change="self._on_kind_change"> One-off link
+    </label>
+    <label class="iris-choice-option">
+      <input type="radio" name="meeting_kind" value="permanent"
+             anvil:dom-node="kind_permanent"
+             anvil:on-dom:change="self._on_kind_change"> Permanent room
+    </label>
+  </fieldset>
+  <anvil-component name="room_name_input" type="form:TextField"
+                   prop:label="Room name, used in the link"
+                   prop:maxlength="64" prop:private="True"></anvil-component>
+  <anvil-component name="title_input" type="form:TextField"
+                   prop:label="Meeting name (optional)"
+                   prop:maxlength="80"></anvil-component>
+  <button type="button" class="iris-button iris-button-primary"
+          anvil:dom-node="create_button"
+          anvil:on-dom:click="self._on_create">Create link</button>
+  <anvil-component name="create_message" type="form:Message" prop:level="alert"></anvil-component>
+  <div anvil:dom-node="result_box" hidden>
+    <anvil-component name="link_field" type="form:CopyField"
+                     prop:label="Meeting link" prop:button_text="Copy link"
+                     prop:copied_text="Link copied."
+                     prop:failed_text="Copy failed. The link is selected, so press Ctrl+C or Cmd+C."></anvil-component>
+    <div class="iris-secret" anvil:dom-node="passphrase_box" hidden>
+      <anvil-component name="passphrase_field" type="form:CopyField"
+                       prop:label="Passphrase" prop:button_text="Copy passphrase"
+                       prop:copied_text="Passphrase copied."
+                       prop:failed_text="Copy failed. The passphrase is selected, so press Ctrl+C or Cmd+C."
+                       prop:secret="True"></anvil-component>
+      <p class="iris-note">Copy this passphrase now and store it somewhere safe. It won't be shown again.</p>
+    </div>
+  </div>
+</section>

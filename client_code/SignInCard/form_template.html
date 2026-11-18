@@ -1,0 +1,20 @@
+---
+custom_component: true
+events:
+  - name: signed_in
+---
+<section class="iris-card">
+  <h1 class="iris-heading">Admin sign-in</h1>
+  <form anvil:dom-node="signin_form" anvil:on-dom:submit="self._on_submit">
+    <anvil-component name="email_input" type="form:TextField"
+                     prop:label="Email" prop:input_type="email"
+                     prop:autocomplete="username"></anvil-component>
+    <anvil-component name="password_input" type="form:TextField"
+                     prop:label="Password" prop:input_type="password"
+                     prop:autocomplete="current-password"></anvil-component>
+    <anvil-component name="signin_message" type="form:Message" prop:level="alert"></anvil-component>
+    <button type="submit" class="iris-button iris-button-primary"
+            anvil:dom-node="signin_button">Sign in</button>
+  </form>
+  <anvil-component name="forgot_password" type="form:ForgotPassword"></anvil-component>
+</section>
