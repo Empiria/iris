@@ -22,9 +22,13 @@ Iris is an [Anvil](https://anvil.works) app: Python on both client and server, w
 - `server_code/health.py`: provides the `ping` callable the local stack tests use.
 - `theme/`: `parameters.yaml` (colour scheme), `assets/theme.css` (design tokens and all styles), `templates.yaml` (empty: there are no theme page templates).
 - `tools/`: `anvil_deps.py` fetches the dependency apps with no login. `leftovers.py` is the starter-leftovers check. It also reads an optional untracked `.leftovers-local` file of extra regexes, one per line. `dev_seed.py` seeds the local stack. `stack_url.py` finds the local stack's URL (see Local stack).
-- `tests/`: `unit/` holds hermetic server-side tests, `e2e/` holds pytest-playwright tests against the live local stack. The two are never collected together.
+- `tests/`: `unit/` holds server-side unit tests, `e2e/` holds pytest-playwright tests against the live local stack. The two are never collected together.
 - The Phase 2 spike tooling (`tools/spike.py`, `tools/spikes/`, `tests/unit/test_spike.py`, the `spike` recipes) is gone from the tree. The annotated tag `spikes-archive` keeps it: `git checkout spikes-archive -- tools/spike.py tools/spikes tests/unit/test_spike.py`.
 - `justfile`: the check, stack and test recipes (see Checks).
+- `.github/workflows/ci.yml`: CI runs `just verify` (with anvil-pyright from npm) on pushes to `main` and on pull requests. The e2e suite is not run there.
+- `REUSE.toml`: the SPDX cover for files that can't hold a header (see `just spdx` under Checks).
+- `SECURITY.md`, `CONTRIBUTING.md`: how to report a vulnerability, and how to send a change.
+- `client_code/ForgotPassword/` is the sign-in form's password-reset entry; `services/password_reset.py` calls the Users service's own reset.
 - `Containerfile`: the local anvil-app-server image.
 - `pyproject.toml` and `uv.lock`: dev and test tooling only. The Anvil app does not use them.
 
@@ -107,7 +111,9 @@ Iris builds its UI from HTML form templates and HTML components. **Don't use Mat
 - `just leftovers` checks that nothing from the starter has come back. It also applies any extra patterns in the optional untracked `.leftovers-local` file. `just setup` lists that file in the git exclude file, and it is never committed.
 - `just spdx` fails if a tracked file has neither an `SPDX-License-Identifier: MIT` and `Copyright (c) 2026 Empiria` header nor a cover in `REUSE.toml`. Give every new file a header (`#` comment in py, justfile and the like, `/* */` in css, `<!-- -->` in md). JSON, lock files, `anvil.yaml`, `.anvil_editor.yaml`, `theme/*.yaml` and every `form_template.html` are covered by `REUSE.toml` instead, because they can't hold a comment or the Anvil editor rewrites them.
 - `just verify` runs lint, format-check, check, validate, leftovers, spdx and unit. It is the gate before handing off.
-- `just unit` runs the hermetic server-side tests.
+- `just unit` runs the server-side unit tests. They need no stack, but a few read source files (`tests/e2e/*.py`, `tools/`) to keep copies of constants in step.
+- `just lock` re-resolves `uv.lock` after a change to the dev dependencies in `pyproject.toml`. Use it rather than `uv lock` by hand.
+- SPDX policy: every tracked file carries an `SPDX-License-Identifier: MIT` and `Copyright (c) 2026 Empiria` header, or is listed in `REUSE.toml`. Don't list a file there if it can hold a comment.
 - After editing any Anvil file (`anvil.yaml`, form templates, `client_code/**/*.py`, `server_code/**/*.py`), run `anvil --json validate <path>` and fix any reported `issues`.
 - `pytest` can't run `client_code/`. Pin server payload shapes in unit tests, and check client behaviour in a browser.
 
