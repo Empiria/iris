@@ -25,6 +25,27 @@ db_schema:
     - name: created
       admin_ui: {width: 200, order: 6}
       type: datetime
+    - name: verifier
+      admin_ui: {width: 200, order: 7}
+      type: string
+    - name: verifier_salt
+      admin_ui: {width: 200, order: 8}
+      type: string
+    - name: kdf_iterations
+      admin_ui: {width: 200, order: 9}
+      type: number
+    - name: vdo_password
+      admin_ui: {width: 200, order: 10}
+      type: string
+    - name: failed_unlocks
+      admin_ui: {width: 200, order: 11}
+      type: number
+    - name: locked_until
+      admin_ui: {width: 200, order: 12}
+      type: datetime
+    - name: updated
+      admin_ui: {width: 200, order: 13}
+      type: datetime
     title: room
   setting:
     client: none
