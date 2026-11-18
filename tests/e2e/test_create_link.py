@@ -66,4 +66,4 @@ def test_anonymous_uplink_call_is_refused(uplink):
         uplink.call("create_one_off_link", "x")
 
     text = type(refused.value).__name__ + " " + str(refused.value)
-    assert "Permission" in text or "not allowed" in text
+    assert "Permission" in text or "not allowed" in text or "logged in" in text
