@@ -4,10 +4,11 @@
 and they are in a high-quality video call one click later: no account, no
 install, no long URL.
 
-- **Short, memorable links.** A Google-Meet-style address in place of a long
-  VDO.Ninja URL full of parameters. Easy to say, paste and trust.
-- **Peer-to-peer calls.** Rooms are [VDO.Ninja](https://vdo.ninja) rooms, so
-  media goes directly between participants. Iris never forces a relay.
+- **Short, memorable links.** Iris builds on [VDO.Ninja](https://vdo.ninja)'s
+  peer-to-peer rooms and adds a short, Google-Meet-style address plus
+  staff-managed settings. Easy to say, paste and trust.
+- **Peer-to-peer calls.** Rooms are VDO.Ninja rooms, so media goes directly
+  between participants. Iris never forces a relay.
 - **No accounts for guests.** Clients open the link and join. Only your staff
   sign in.
 - **Your call settings, applied for you.** Staff control the quality profile
@@ -21,7 +22,6 @@ install, no long URL.
 > **Read the story:** [Why I use VDO Ninja for video calling and screen
 > sharing](https://empiria.co.uk/blog/vdo_ninja/), the Empiria blog post behind
 > Iris.
-> <!-- TODO(Owen): replace with the Iris blog post link if a dedicated post exists; none found in the repos or vault. -->
 
 [Empiria](https://empiria.co.uk) runs its instance at meet.empiria.co.uk.
 
@@ -42,8 +42,8 @@ member of staff can give a link an optional title and create it. The link is
 copied to the clipboard, and can be copied again from the page.
 
 Each one-off link is a recorded `room` row with its own slug and a separate
-random VDO.Ninja room name. VDO.Ninja keeps no registry of rooms, so that
-unguessable room name, returned only by the server lookup, is what stops
+random VDO.Ninja room name. VDO.Ninja rooms are created on demand by name, so
+that unguessable room name, returned only by the server lookup, is what stops
 someone inventing a slug and reaching a room. It also means a link can be
 revoked (set the row inactive) and its creator is recorded.
 
@@ -63,14 +63,15 @@ On most browsers the room opens in an iframe inside the Iris page, so the short
 link stays in the address bar. Some browsers get a top-level redirect to the
 VDO.Ninja address instead:
 
-- **Brave.** Its Shields block the third-party storage the room needs inside an
-  iframe, which makes the room ask for the participant's name again. Brave
-  can't be told from Chrome by its user agent, so Iris asks the browser
-  (`navigator.brave.isBrave()`).
+- **Brave.** Its Shields restrict the third-party storage a room uses inside an
+  iframe, so the room would ask for the participant's name again. Going to
+  VDO.Ninja directly avoids that. Brave can't be told from Chrome by its user
+  agent, so Iris asks the browser (`navigator.brave.isBrave()`).
 - **Safari on iOS (iPhone and iPad) and in-app browsers** (Facebook, Instagram,
   LinkedIn, Snapchat, WeChat, Line, Android WebViews and similar). They are
-  sent to the room directly, which is the safe route on these browsers. An in-app browser that Iris doesn't recognise
-  is treated as the browser it imitates.
+  sent to the room directly, which is the safe route on these browsers. An
+  in-app browser that Iris doesn't recognise is treated as the browser it
+  imitates.
 - Any browser Iris can't classify also redirects.
 
 The rule lives in `client_code/services/handoff.py`. The embed sets
