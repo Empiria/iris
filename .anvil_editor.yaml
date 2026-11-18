@@ -9,4 +9,5 @@ unique_ids:
     services.routes: APEPOJR4PB4LTHLIYJT5ORCIZWPHZJDV
     startup: QYXOEOL2FREYCA5EINHSZVKKM6EXGEIE
   scripts: {}
-  server_modules: {}
+  server_modules:
+    health: DS3FWA6YRKVNJMEE2WLGUM2GB2EDUMPD

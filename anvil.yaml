@@ -7,7 +7,7 @@ dependencies:
   resolution_hints: {app_id: N7KFE4YBWMGWJ5OX, name: anvil-reactive, package_name: anvil_reactive}
   version: {version_tag: v0.1.4}
 name: Iris
-package_name: app
+package_name: iris
 runtime_options:
   client_version: '3'
   server_spec: {base: python310-minimal}
