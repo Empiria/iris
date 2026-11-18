@@ -1,0 +1,9 @@
+db_schema:
+  spike_call:
+    client: none
+    server: full
+    title: spike_call
+    columns:
+    - name: slug
+      admin_ui: {width: 200, order: 0}
+      type: string

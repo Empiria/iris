@@ -24,7 +24,12 @@ img := "iris-anvil-dev"
 ctr := env_var_or_default("IRIS_CONTAINER", "iris-anvil-" + file_name(justfile_directory()))
 vol := ctr + "-data"
 
+# The spike container: a second, throwaway container beside the stack, named from
+# the checkout so two checkouts never share one fixed name.
+spike_ctr := env_var_or_default("IRIS_SPIKE_CONTAINER", ctr + "-spike")
+
 export IRIS_UPLINK_URL := uplink_url
+export IRIS_SPIKE_CONTAINER := spike_ctr
 
 # Playwright browsers live in the repo's git-ignored .anvil/, not under $HOME, so
 # every recipe and check finds them whatever HOME is. `just setup` fills it.
@@ -90,9 +95,12 @@ check: deps
 stubs:
     @echo "Nothing to do: anvil-pyright bundles the Anvil stubs. Do not wire in a .stubs/ directory (it switches the Anvil rules off)."
 
-# Validate the Anvil manifest, forms and code. Nothing is staged in the repo tree outside the ignored .anvil/, so the target is the whole tree.
+# Validate the Anvil manifest, forms and code. Each app path is named, not "." as a whole, because tools/spikes/ holds overlay forms that are only valid once laid into a spike copy of the app.
 validate: deps
-    anvil validate .
+    anvil validate anvil.yaml
+    anvil validate client_code
+    anvil validate server_code
+    anvil validate theme
 
 # Fail if anything left over from the project template has come back.
 leftovers:
@@ -172,6 +180,16 @@ seed: _need-stack
 # Host-only: a worker sandbox can't reach the host stack (see AGENTS.md).
 e2e: _need-stack
     uv run pytest tests/e2e --base-url {{ base_url }}
+
+# [host] Run a Phase 2 spike: `just spike all`, `just spike <name>` or `just spike list`.
+# Host-only like the other stack recipes: it needs podman and the image from `just build`.
+spike *args: (_need-podman "spike")
+    uv run --script tools/spike.py {{ args }}
+
+# [host] Force-remove the spike container. Fine if there isn't one.
+# Host-only like the other stack recipes.
+spike-down: (_need-podman "spike-down")
+    -podman rm -f --time 0 {{ spike_ctr }}
 
 # [host] Run every host-only check in order, stop at the first failure, log to .anvil/host-check.txt, leave the stack up.
 host-check: (_need-podman "host-check")
