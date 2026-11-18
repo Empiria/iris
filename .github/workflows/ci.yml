@@ -35,8 +35,14 @@ jobs:
         with:
           path: .anvil
           key: anvil-deps-${{ hashFiles('anvil.yaml') }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # anvil-pyright is published on npm, not PyPI.
+      - name: Install anvil-pyright
+        run: npm install --global @anvil-works/anvil-pyright@0.0.3
       - name: Install the dev tools
         run: uv sync --group dev
-      # uv run puts the project's ruff and anvil-pyright on PATH.
+      # uv run puts the project's ruff on PATH.
       - name: Verify
         run: uv run just verify

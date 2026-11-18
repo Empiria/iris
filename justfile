@@ -76,6 +76,10 @@ setup:
 deps:
     uv run --script tools/anvil_deps.py
 
+# Re-resolve uv.lock after a change to the dev dependencies in pyproject.toml.
+lock:
+    uv lock
+
 # Lint (see .ruff.toml).
 lint:
     ruff check .

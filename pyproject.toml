@@ -17,10 +17,10 @@ dev = [
     # newer wheel would want a build that `playwright install` can't fetch there.
     "playwright==1.65.2",
     "pyyaml>=6.0",
-    # Exact pins so CI and every checkout lint, format and type-check alike.
-    # Keep ruff equal to the rev in .pre-commit-config.yaml.
+    # Exact pin so CI and every checkout lint and format alike. Keep it equal to the
+    # rev in .pre-commit-config.yaml. anvil-pyright is an npm package, pinned in
+    # .github/workflows/ci.yml, not a Python one.
     "ruff==0.17.5",
-    "anvil-pyright==0.0.3",
 ]
 
 [tool.uv]
