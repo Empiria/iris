@@ -6,8 +6,6 @@
 # Sandbox rule: recipes marked [host] need rootless podman, which can't run in a
 # worker sandbox. They fail fast there and name the command to run on the host.
 
-vault := env_var_or_default("MNEMOSYNE_VAULT", env_var("HOME") + "/projects/empiria/mnemosyne")
-
 # There is no fixed host port. `just up` publishes the app on a free
 # loopback port it picks and writes the URL to the git-ignored .anvil/stack-url. Recipes and
 # tools read it back through tools/stack_url.py, which takes IRIS_URL first, so
@@ -29,12 +27,6 @@ img := "iris-anvil-dev"
 # stacks can run at once, each on its own port.
 ctr := env_var_or_default("IRIS_CONTAINER", "iris-anvil-" + file_name(justfile_directory()))
 vol := ctr + "-data"
-
-# The spike container: a second, throwaway container beside the stack, named from
-# the checkout so two checkouts never share one fixed name.
-spike_ctr := env_var_or_default("IRIS_SPIKE_CONTAINER", ctr + "-spike")
-
-export IRIS_SPIKE_CONTAINER := spike_ctr
 
 # Playwright browsers live in the repo's git-ignored .anvil/, not under $HOME, so
 # every recipe and check finds them whatever HOME is. `just setup` fills it.
@@ -104,7 +96,7 @@ check: deps
 stubs:
     @echo "Nothing to do: anvil-pyright bundles the Anvil stubs. Do not wire in a .stubs/ directory (it switches the Anvil rules off)."
 
-# Validate the Anvil manifest, forms and code. Each app path is named, not "." as a whole, because tools/spikes/ holds overlay forms that are only valid once laid into a spike copy of the app.
+# Validate the Anvil manifest, forms and code.
 validate: deps
     anvil validate anvil.yaml
     anvil validate client_code
@@ -120,8 +112,10 @@ spdx:
     python3 tools/spdx_check.py
 
 # Comment-to-code density, as a prompt to re-read, not a gate.
+# Needs MNEMOSYNE_VAULT set to a vault checkout that holds technologies/python/tools/comment_ratio.py.
 density:
-    @python3 "{{ vault }}/technologies/python/tools/comment_ratio.py" client_code server_code
+    @[ -n "${MNEMOSYNE_VAULT:-}" ] || { echo "density: set MNEMOSYNE_VAULT to the vault checkout"; exit 1; }
+    @python3 "$MNEMOSYNE_VAULT/technologies/python/tools/comment_ratio.py" client_code server_code
 
 # The whole gate: static checks plus the hermetic unit tests. Run before every commit. CI runs this too.
 verify: lint format-check check validate leftovers spdx unit
@@ -221,16 +215,6 @@ create-admin *args: _need-stack
 # Host-only: a worker sandbox can't reach the host stack (see AGENTS.md).
 e2e: _need-stack
     uv run pytest tests/e2e
-
-# [host] Run a spike: `just spike all`, `just spike <name>` or `just spike list`.
-# Host-only like the other stack recipes: it needs podman and the image from `just build`.
-spike *args: (_need-podman "spike")
-    uv run --script tools/spike.py {{ args }}
-
-# [host] Force-remove the spike container. Fine if there isn't one.
-# Host-only like the other stack recipes.
-spike-down: (_need-podman "spike-down")
-    -podman rm -f --time 0 {{ spike_ctr }}
 
 # [host] Run every host-only check in order, stop at the first failure, log to .anvil/host-check.txt, leave the stack up.
 host-check: (_need-podman "host-check")
