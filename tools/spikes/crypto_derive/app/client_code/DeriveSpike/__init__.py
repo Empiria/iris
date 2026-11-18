@@ -11,8 +11,9 @@ TIMED_ITERATIONS = (100000, 600000)
 
 
 def _hex(buffer):
+    # A Uint8Array view comes back to Python as bytes.
     view = anvil.js.window.Uint8Array(buffer)
-    return "".join([format(int(view[i]), "02x") for i in range(int(view.length))])
+    return "".join([format(b, "02x") for b in bytes(view)])
 
 
 def derive_anvil_js(passphrase, salt, iterations):

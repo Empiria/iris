@@ -61,8 +61,11 @@ def timings(fields: dict) -> dict:
     """{iterations: ms} from the `ms<iterations>=<ms>` tokens."""
     found = {}
     for key, value in fields.items():
-        if key.startswith("ms") and key[2:].isdigit() and value.isdigit():
-            found[int(key[2:])] = int(value)
+        if key.startswith("ms") and key[2:].isdigit():
+            try:
+                found[int(key[2:])] = round(float(value), 1)
+            except ValueError:
+                continue
     return found
 
 
@@ -125,12 +128,12 @@ def _click(page, label: str, case: str) -> dict:
     """Click the button and return the output line's fields once it says DONE."""
     page.get_by_role("button", name=label).click()
     page.wait_for_function(
-        "([want]) => { const t = document.querySelector('pre').innerText;"
+        "([want]) => { const t = document.querySelector('main pre').innerText;"
         " return t.startsWith(want) && t.includes('DONE'); }",
         arg=[case],
         timeout=CLICK_TIMEOUT_MS,
     )
-    return parse_fields(page.locator("pre").inner_text())
+    return parse_fields(page.locator("main pre").inner_text())
 
 
 def _rows(page, expected: str) -> list:
@@ -162,7 +165,7 @@ def run(base_url):
             page.goto(
                 base_url, wait_until="domcontentloaded", timeout=FIRST_LOAD_TIMEOUT_MS
             )
-            page.wait_for_selector("pre", timeout=FIRST_LOAD_TIMEOUT_MS)
+            page.wait_for_selector("main pre", timeout=FIRST_LOAD_TIMEOUT_MS)
             return _rows(page, expected)
     except Exception as exc:
         banner = banner_detail(page) if page else ""

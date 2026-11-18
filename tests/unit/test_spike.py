@@ -494,6 +494,10 @@ class TestCryptoDeriveProbe:
         fields = probe.parse_fields("S3 ms100000=40 ms300000=120 error=x")
         assert probe.timings(fields) == {100000: 40, 300000: 120}
 
+    def test_timings_accept_fractional_milliseconds(self, probe):
+        fields = probe.parse_fields("S3 ms100000=30.9 ms600000=187.2")
+        assert probe.timings(fields) == {100000: 30.9, 600000: 187.2}
+
     def test_s1a_passes_on_the_reference_hex_with_timings(self, probe):
         fields = {"hex": "aa", "ms100000": "5"}
         assert probe.check_s1a(fields, "aa")[0] == "PASS"
