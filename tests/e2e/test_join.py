@@ -132,9 +132,11 @@ def test_empty_name_is_refused_and_nothing_is_handed_off(page: Page):
     assert not page.get_by_text(ERROR_BANNER).is_visible()
 
 
-def test_home_and_staff_still_load_cold(page: Page):
+def test_root_and_staff_still_load_cold(page: Page):
     page.goto("", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
-    expect(page.get_by_text("Server check: pong")).to_be_visible(timeout=FIRST_LOAD_MS)
+    expect(page.get_by_role("heading", name="Staff sign-in")).to_be_visible(
+        timeout=FIRST_LOAD_MS
+    )
     assert page.get_by_role("heading", name="No such meeting").count() == 0
 
     page.goto("staff", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)

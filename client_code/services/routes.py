@@ -3,25 +3,23 @@ from routing import router
 
 from iris.services import join  # pyright: ignore[reportAttributeAccessIssue]
 
-# Routes match in the order they are declared, so /staff and / come before the
+# Routes match in the order they are declared, so / and /staff come before the
 # /:slug catch-all (spike S1c). Reserved slugs such as "staff" are refused again
 # by join.is_joinable_slug, so a meeting can never shadow a page.
 
 
 class StaffRoute(router.Route):
-    path = "/staff"
+    path = "/"
     form = "iris.Staff"
 
     def meta(self, **kwargs):
         return {"title": "Iris staff"}
 
 
-class HomeRoute(router.Route):
-    path = "/"
-    form = "iris.HelloWorld"
-
-    def meta(self, **kwargs):
-        return {"title": "Iris"}
+class StaffAliasRoute(StaffRoute):
+    # /staff keeps working for existing bookmarks. It is a separate route class
+    # because a Route has one path.
+    path = "/staff"
 
 
 class JoinRoute(router.Route):
