@@ -5,14 +5,10 @@
 
 vault := env_var_or_default("MNEMOSYNE_VAULT", env_var("HOME") + "/projects/empiria/mnemosyne")
 
-# The host port the stack is published on (loopback only). The app inside the
-# container always listens on 3030. Override per call with `just port=3040 up`
-# (the setting goes before the recipe name), or with the IRIS_PORT environment
-# variable. It is exported to every recipe, so a nested `just up` and the python
-# tools see the same value.
-port := env_var_or_default("IRIS_PORT", "3030")
-base_url := env_var_or_default("IRIS_URL", "http://localhost:" + port + "/")
-uplink_url := env_var_or_default("IRIS_UPLINK_URL", "ws://localhost:" + port + "/_/uplink")
+# There is no fixed host port. `just up` publishes the app on a random free
+# loopback port and writes the URL to the git-ignored .anvil/stack-url. Recipes and
+# tools read it back through tools/stack_url.py, which takes IRIS_URL first, so
+# IRIS_URL still points a tool at another stack.
 
 # How many times the stack guard retries (2 s apart) before it gives up.
 stack_retries := env_var_or_default("IRIS_STACK_RETRIES", "30")
@@ -26,7 +22,8 @@ package := `sed -n 's/^package_name: *//p' anvil.yaml`
 img := "iris-anvil-dev"
 # One container and database per checkout, named after its directory, so a
 # stale container left by another checkout or worktree can't block this one.
-# IRIS_CONTAINER overrides the name. Only one stack can hold a given host port at a time (see `port` above).
+# IRIS_CONTAINER overrides the name, and so does `just ctr=NAME up`, so several
+# stacks can run at once, each on its own random port.
 ctr := env_var_or_default("IRIS_CONTAINER", "iris-anvil-" + file_name(justfile_directory()))
 vol := ctr + "-data"
 
@@ -34,8 +31,6 @@ vol := ctr + "-data"
 # the checkout so two checkouts never share one fixed name.
 spike_ctr := env_var_or_default("IRIS_SPIKE_CONTAINER", ctr + "-spike")
 
-export IRIS_PORT := port
-export IRIS_UPLINK_URL := uplink_url
 export IRIS_SPIKE_CONTAINER := spike_ctr
 
 # Playwright browsers live in the repo's git-ignored .anvil/, not under $HOME, so
@@ -133,7 +128,7 @@ build: deps (_need-podman "build")
     podman build -t {{ img }} .anvil/build
     rm -rf .anvil/build
 
-# [host] Start the stack on the host port (default 3030), or resume the stopped one (the DB survives).
+# [host] Start the stack on a random free loopback port, or resume the stopped one (the DB survives). Records the URL in .anvil/stack-url.
 up: (_need-podman "up")
     #!/usr/bin/env bash
     set -euo pipefail
@@ -144,14 +139,20 @@ up: (_need-podman "up")
         # The --dep-id flags come from anvil.yaml, so ids are never typed twice.
         # After a package_name or dep_id change in anvil.yaml, run `just fresh`.
         [ -n "{{ package }}" ] || { echo "up: no package_name in anvil.yaml"; exit 1; }
-        podman run -d --name {{ ctr }} -p 127.0.0.1:{{ port }}:3030 \
+        # `127.0.0.1::3030` lets podman pick a free host port, so stacks from other
+        # checkouts and projects never collide. The app inside still listens on 3030.
+        podman run -d --name {{ ctr }} -p 127.0.0.1::3030 \
             -v "{{ justfile_directory() }}:/srv/{{ package }}:ro,z" -v {{ vol }}:/data \
             {{ img }} --app /srv/{{ package }} $(uv run --script tools/anvil_deps.py --dep-id-args)
     fi
+    # The host port is assigned when the container starts, so ask the container.
+    url="$(python3 tools/stack_url.py refresh {{ ctr }})"
+    echo "stack: $url"
 
 # [host] Stop the stack.
 down: (_need-podman "down")
     -podman stop {{ ctr }}
+    python3 tools/stack_url.py clear
 
 # [host] Stop and start the stack.
 restart: down up
@@ -184,14 +185,14 @@ seed: _need-stack
     uv run --script tools/dev_seed.py
 
 # [host] Create the first staff account on the local stack: `just create-staff --dev` or `just create-staff you@example.com`.
-# Needs the stack up (on `port`), so it is host-only like seed. A hosted app runs scripts/CreateStaff.py from the Anvil editor instead.
+# Needs the stack up, so it is host-only like seed. A hosted app runs scripts/CreateStaff.py from the Anvil editor instead.
 create-staff *args: _need-stack
     uv run --script tools/create_staff.py {{ args }}
 
 # [host] Browser tests against the running stack (needs the stack up).
 # Host-only: a worker sandbox can't reach the host stack (see AGENTS.md).
 e2e: _need-stack
-    uv run pytest tests/e2e --base-url {{ base_url }}
+    uv run pytest tests/e2e
 
 # [host] Run a Phase 2 spike: `just spike all`, `just spike <name>` or `just spike list`.
 # Host-only like the other stack recipes: it needs podman and the image from `just build`.
@@ -217,10 +218,12 @@ host-check: (_need-podman "host-check")
     fail() { echo "host-check: $*" >&2; exit 1; }
     trap 'rc=$?; [ "$rc" -eq 0 ] || { echo; echo "host-check: FAILED at step $step ($name), exit $rc. Log: $out"; }' EXIT
     # Prints the seconds until the stack answers 200.
+    # The URL is read each time: the host port is random, and a restart changes it.
     wait_200() {
-        local start=$SECONDS
-        until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 '{{ base_url }}' || true)" = 200 ]; do
-            [ $((SECONDS - start)) -lt {{ boot_timeout }} ] || fail "no 200 from {{ base_url }} after {{ boot_timeout }} s"
+        local start=$SECONDS url
+        url="$(python3 tools/stack_url.py)" || fail "no stack URL after 'just up'"
+        until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$url" || true)" = 200 ]; do
+            [ $((SECONDS - start)) -lt {{ boot_timeout }} ] || fail "no 200 from $url after {{ boot_timeout }} s"
             sleep 3
         done
         echo $((SECONDS - start))
@@ -283,10 +286,12 @@ host-check: (_need-podman "host-check")
     begin "the port is published on loopback only"
     published="$(podman port {{ ctr }})"
     echo "$published"
-    [ "$published" = "3030/tcp -> 127.0.0.1:{{ port }}" ] || fail "expected 3030/tcp -> 127.0.0.1:{{ port }}"
-    listen="$(ss -ltnH 'sport = :{{ port }}')"
+    [[ "$published" =~ ^3030/tcp\ -\>\ 127\.0\.0\.1:([0-9]+)$ ]] || fail "expected '3030/tcp -> 127.0.0.1:<random port>'"
+    host_port="${BASH_REMATCH[1]}"
+    [ "$(python3 tools/stack_url.py)" = "http://localhost:$host_port/" ] || fail ".anvil/stack-url does not match the published port $host_port"
+    listen="$(ss -ltnH "sport = :$host_port")"
     echo "$listen"
-    if grep -qE '(0\.0\.0\.0|\[::\]|\*):{{ port }}' <<<"$listen"; then fail "port {{ port }} listens beyond loopback"; fi
+    if grep -qE "(0\.0\.0\.0|\[::\]|\*):$host_port" <<<"$listen"; then fail "port $host_port listens beyond loopback"; fi
 
     begin "the server got the app path and dependency ids from anvil.yaml"
     cmd="$(podman inspect {{ ctr }} --format '{{{{json .Config.Cmd}}')"
@@ -317,9 +322,10 @@ host-check: (_need-podman "host-check")
     fi
 
     begin "lifecycle: down"
+    old_url="$(python3 tools/stack_url.py)"
     just down
     if podman ps --format '{{{{.Names}}' | grep -qx {{ ctr }}; then fail "{{ ctr }} is still running"; fi
-    if curl -fsS -o /dev/null --max-time 3 '{{ base_url }}' 2>/dev/null; then fail "{{ base_url }} still answers"; fi
+    if curl -fsS -o /dev/null --max-time 3 "$old_url" 2>/dev/null; then fail "$old_url still answers"; fi
     echo "stopped"
 
     begin "lifecycle: up"
@@ -352,7 +358,7 @@ host-check: (_need-podman "host-check")
     echo "just build: ${build_secs} s"
     echo "cold boot to first 200: ${boot_secs} s"
     echo "seed and e2e output: in the seed, browser test and fresh steps above"
-    echo "host-check: all steps passed. The stack is still running at {{ base_url }}."
+    echo "host-check: all steps passed. The stack is still running at $(python3 tools/stack_url.py)."
 
 [private]
 _need-podman recipe:
@@ -360,4 +366,12 @@ _need-podman recipe:
 
 [private]
 _need-stack:
-    @curl -fsS -o /dev/null --max-time 5 --retry {{ stack_retries }} --retry-delay 2 --retry-connrefused "{{ base_url }}" || { echo "No stack answering at {{ base_url }}. Start it on the host with 'just up'. A worker sandbox can't reach the host stack (see AGENTS.md), so run this recipe on the host."; exit 1; }
+    #!/usr/bin/env bash
+    set -uo pipefail
+    # On the host, ask the running container for its (random) port first. Without
+    # podman, or with the container stopped, fall back to IRIS_URL or the file.
+    if [ "$(podman inspect -f '{{{{.State.Running}}' {{ ctr }} 2>/dev/null)" = true ]; then
+        python3 tools/stack_url.py refresh {{ ctr }} >/dev/null 2>&1 || true
+    fi
+    url="$(python3 tools/stack_url.py)" || exit 1
+    curl -fsS -o /dev/null --max-time 5 --retry {{ stack_retries }} --retry-delay 2 --retry-connrefused "$url" || { echo "No stack answering at $url. Start it on the host with 'just up'. A worker sandbox can't reach the host stack (see AGENTS.md), so run this recipe on the host."; exit 1; }

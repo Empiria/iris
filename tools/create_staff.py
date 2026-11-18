@@ -27,11 +27,16 @@ import os
 import sys
 import threading
 import time
+from pathlib import Path
 from urllib.parse import urlparse
 
+# A sibling in tools/. Put tools/ on the path so a load by file path finds it too.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import stack_url  # noqa: E402
+
 # Local-stack-only values. They match the Containerfile and tools/dev_seed.py and
-# protect nothing: the stack is bound to loopback.
-DEFAULT_PORT = "3030"
+# protect nothing: the stack is bound to loopback. The URL is not here: the stack's
+# host port is random, so stack_url.py finds it.
 LOCAL_KEY = "dev-uplink"
 DEV_STAFF_EMAIL = "staff@example.test"
 DEV_STAFF_PASSWORD = "dev-staff-password-local"
@@ -51,30 +56,14 @@ class ScriptFailed(Exception):
     """The script ended in failure. The message is the script's own error text."""
 
 
-def stack_port(environ):
-    """The host port of the local stack: IRIS_PORT, else 3030. Must be 1-65535."""
-    text = (environ.get("IRIS_PORT") or DEFAULT_PORT).strip()
-    if not text.isdigit() or not 1 <= int(text) <= 65535:
-        raise ValueError(f"IRIS_PORT must be a port number, not {text!r}")
-    return int(text)
+def resolve_connection(environ, url_file=None):
+    """The (url, key) to connect with. Refuses anything but a local ws URL.
 
-
-def uplink_url(environ):
-    """The local uplink URL: IRIS_UPLINK_URL, else ws://localhost:<port>/_/uplink."""
-    return (
-        environ.get("IRIS_UPLINK_URL")
-        or f"ws://localhost:{stack_port(environ)}/_/uplink"
-    )
-
-
-def base_url(environ):
-    """The local app URL: IRIS_URL, else http://localhost:<port>/."""
-    return environ.get("IRIS_URL") or f"http://localhost:{stack_port(environ)}/"
-
-
-def resolve_connection(environ):
-    """The (url, key) to connect with. Refuses anything but a local ws URL."""
-    url = uplink_url(environ)
+    The URL is IRIS_UPLINK_URL, else derived from IRIS_URL or `.anvil/stack-url`
+    (see stack_url.py). With none of those it raises stack_url.NoStack, a
+    ValueError whose message says how to start a stack.
+    """
+    url = stack_url.uplink_url(environ, url_file)
     key = environ.get("IRIS_UPLINK_KEY") or LOCAL_KEY
     parts = urlparse(url)
     if parts.scheme != "ws" or parts.hostname not in LOCAL_HOSTS:

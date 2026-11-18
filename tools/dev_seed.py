@@ -22,10 +22,13 @@ import threading
 import anvil.server
 import anvil.users
 import create_staff  # a sibling in tools/, first on sys.path when run by path
+import stack_url
 from anvil.tables import app_tables
 
 KEY = os.environ.get("IRIS_UPLINK_KEY", "dev-uplink")
-URL = create_staff.uplink_url(os.environ)
+# The uplink URL comes from IRIS_UPLINK_URL, IRIS_URL or .anvil/stack-url (the stack's
+# host port is random). Set by main(), so a missing stack is a clear error.
+URL = ""
 
 # How long to wait for the uplink to come up before giving up.
 CONNECT_TIMEOUT_S = 20
@@ -76,6 +79,12 @@ def _seed_accounts() -> None:
 
 
 def main() -> int:
+    global URL
+    try:
+        URL = stack_url.uplink_url(os.environ)
+    except stack_url.NoStack as error:
+        print(f"seed: {error}", file=sys.stderr)
+        return 1
     # anvil-uplink retries a dropped connection on a non-daemon thread, which
     # keeps the process alive after the work is done. Turn that off.
     anvil.server.reconnect = lambda closed_connection: None

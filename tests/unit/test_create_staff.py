@@ -301,48 +301,18 @@ def _no_sleep(_seconds):
     return None
 
 
-def test_default_connection_is_the_local_dev_uplink(launcher):
-    assert launcher.resolve_connection({}) == (
-        "ws://localhost:3030/_/uplink",
+def test_default_connection_follows_the_stack_url_file(launcher, tmp_path):
+    url_file = tmp_path / "stack-url"
+    url_file.write_text("http://localhost:41234/\n")
+    assert launcher.resolve_connection({}, url_file) == (
+        "ws://localhost:41234/_/uplink",
         "dev-uplink",
     )
 
 
-def test_the_stack_port_defaults_to_3030(launcher):
-    assert launcher.stack_port({}) == 3030
-    assert launcher.stack_port({"IRIS_PORT": ""}) == 3030
-
-
-def test_the_stack_port_comes_from_iris_port(launcher):
-    assert launcher.stack_port({"IRIS_PORT": "3040"}) == 3040
-
-
-@pytest.mark.parametrize("value", ["abc", "0", "65536", "30 40", "-1", "3040/tcp"])
-def test_a_bad_stack_port_is_refused(launcher, value):
-    with pytest.raises(ValueError):
-        launcher.stack_port({"IRIS_PORT": value})
-
-
-def test_the_urls_follow_the_stack_port(launcher):
-    env = {"IRIS_PORT": "3040"}
-    assert launcher.uplink_url(env) == "ws://localhost:3040/_/uplink"
-    assert launcher.base_url(env) == "http://localhost:3040/"
-    assert launcher.resolve_connection(env)[0] == "ws://localhost:3040/_/uplink"
-
-
-def test_the_urls_default_to_port_3030(launcher):
-    assert launcher.uplink_url({}) == "ws://localhost:3030/_/uplink"
-    assert launcher.base_url({}) == "http://localhost:3030/"
-
-
-def test_an_explicit_url_beats_the_port(launcher):
-    env = {
-        "IRIS_PORT": "3040",
-        "IRIS_URL": "http://localhost:4000/",
-        "IRIS_UPLINK_URL": "ws://localhost:4000/_/uplink",
-    }
-    assert launcher.base_url(env) == "http://localhost:4000/"
-    assert launcher.uplink_url(env) == "ws://localhost:4000/_/uplink"
+def test_the_launcher_names_no_stack_when_there_is_none(launcher, tmp_path):
+    with pytest.raises(ValueError, match="just up"):
+        launcher.resolve_connection({}, tmp_path / "missing")
 
 
 @pytest.mark.parametrize(
@@ -353,7 +323,8 @@ def test_loopback_urls_are_accepted(launcher, url):
 
 
 def test_the_key_can_be_overridden_by_environment(launcher):
-    assert launcher.resolve_connection({"IRIS_UPLINK_KEY": "other"})[1] == "other"
+    env = {"IRIS_UPLINK_KEY": "other", "IRIS_URL": "http://localhost:41234/"}
+    assert launcher.resolve_connection(env)[1] == "other"
 
 
 @pytest.mark.parametrize(
@@ -553,7 +524,9 @@ class FakeConnection:
 def _main(launcher, tables, statuses, argv, environ=None, error=None):
     server = FakeServer(FakeTask(statuses, error=error))
     connect = FakeConnection(server, FakeUsersApi(tables), tables)
-    return server, launcher.main(argv, environ or {}, connect=connect, sleep=_no_sleep)
+    # The stack has no fixed port, so every run names one.
+    environ = {"IRIS_URL": "http://localhost:41234/", **(environ or {})}
+    return server, launcher.main(argv, environ, connect=connect, sleep=_no_sleep)
 
 
 def test_main_creates_dev_accounts_and_exits_zero(launcher, tables, capsys):

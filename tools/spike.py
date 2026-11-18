@@ -25,6 +25,7 @@ import argparse
 import importlib.util
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -34,7 +35,6 @@ from pathlib import Path
 import yaml
 
 IMAGE = "iris-anvil-dev"
-DEFAULT_PORT = 3031
 APP_ITEMS = (
     "anvil.yaml",
     "client_code",
@@ -157,11 +157,13 @@ def spike_container(repo: Path, env) -> str:
     return f"{stack}-spike"
 
 
-def spike_port(env) -> int:
-    raw = env.get("IRIS_SPIKE_PORT")
-    if raw is None or raw == "":
-        return DEFAULT_PORT
-    return int(raw)
+def spike_port(env=None) -> int:
+    """A free loopback port for this run. No port is fixed: stacks from several
+    checkouts and projects run side by side. The page needs the published port
+    in its --origin, so the port is chosen here rather than left to podman."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
 
 
 def format_row(spike_id, verdict, evidence) -> str:

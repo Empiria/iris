@@ -8,9 +8,10 @@ explicit PLAYWRIGHT_BROWSERS_PATH still wins.
 dev accounts. The first runs `tools/create_staff.py --dev`, which makes both and
 is safe to run again, so a second run in the same database passes.
 
-The stack's host port comes from IRIS_PORT (default 3030), like the justfile's
-`port` setting. There is no `base_url` in pyproject.toml: the `base_url` fixture
-below reads `--base-url`, then IRIS_URL, then IRIS_PORT.
+The stack's host port is random, so there is no URL in pyproject.toml. The
+`base_url` fixture reads `--base-url`, then IRIS_URL, then `.anvil/stack-url`
+(written by `just up`), via tools/stack_url.py. With none of them it fails with
+a message that says how to start a stack.
 """
 
 import importlib.util
@@ -30,6 +31,9 @@ ROOT = Path(__file__).resolve().parents[2]
 BROWSERS = ROOT / ".anvil" / "ms-playwright"
 LAUNCHER = ROOT / "tools" / "create_staff.py"
 
+sys.path.insert(0, str(ROOT / "tools"))
+import stack_url  # noqa: E402
+
 os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(BROWSERS))
 
 
@@ -43,10 +47,14 @@ def _launcher_constants():
 
 @pytest.fixture(scope="session")
 def base_url(request):
-    """The app URL: an explicit --base-url, else IRIS_URL, else the stack port."""
-    return request.config.getoption("base_url") or _launcher_constants().base_url(
-        os.environ
-    )
+    """The app URL: an explicit --base-url, else IRIS_URL, else .anvil/stack-url."""
+    explicit = request.config.getoption("base_url")
+    if explicit:
+        return explicit
+    try:
+        return stack_url.base_url()
+    except stack_url.NoStack as error:
+        pytest.fail(str(error))
 
 
 @pytest.fixture(scope="session")
@@ -104,7 +112,10 @@ def uplink():
 
     import anvil.server
 
-    url = _launcher_constants().uplink_url(os.environ)
+    try:
+        url = stack_url.uplink_url()
+    except stack_url.NoStack as error:
+        pytest.fail(str(error))
     key = os.environ.get("IRIS_UPLINK_KEY", "dev-uplink")
     # The uplink retries a dropped connection on a non-daemon thread, which would
     # keep the test process alive after the run.

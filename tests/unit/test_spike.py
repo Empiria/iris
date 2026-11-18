@@ -182,7 +182,7 @@ class TestContainerCommand:
         args = {
             "name": "iris-anvil-co-spike",
             "dest": dest,
-            "port": 3031,
+            "port": 41031,
             "package": "iris",
             "dep_args": ["--dep-id", "dep_a=routing"],
         }
@@ -191,8 +191,8 @@ class TestContainerCommand:
 
     def test_publishes_loopback_only(self, spike, dest):
         cmd = self.command(spike, dest)
-        assert "127.0.0.1:3031:3030" in cmd
-        assert not any(a.startswith("3031") for a in cmd)
+        assert "127.0.0.1:41031:3030" in cmd
+        assert not any(a.startswith("41031") for a in cmd)
 
     def test_the_origin_is_the_published_port_and_the_app_still_listens_on_3030(
         self, spike, dest
@@ -229,7 +229,7 @@ class TestContainerCommand:
             "--app",
             "/srv/iris",
             "--origin",
-            "http://localhost:3031",
+            "http://localhost:41031",
             "--port",
             "3030",
             "--dep-id",
@@ -289,15 +289,16 @@ class TestNames:
         assert spike.spike_container(repo, {}) != "iris-anvil-alpha"
         assert spike.spike_container(repo, {"IRIS_CONTAINER": "m"}) != "m"
 
-    def test_port_defaults_to_3031(self, spike):
-        assert spike.spike_port({}) == 3031
+    def test_port_is_a_free_loopback_port(self, spike):
+        import socket
 
-    def test_port_override(self, spike):
-        assert spike.spike_port({"IRIS_SPIKE_PORT": "4100"}) == 4100
+        port = spike.spike_port({})
+        assert 1024 <= port <= 65535
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", port))
 
-    def test_port_must_be_numeric(self, spike):
-        with pytest.raises(ValueError):
-            spike.spike_port({"IRIS_SPIKE_PORT": "abc"})
+    def test_no_fixed_port(self, spike):
+        assert not hasattr(spike, "DEFAULT_PORT")
 
 
 class TestFormatRow:
