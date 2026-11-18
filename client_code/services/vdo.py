@@ -223,19 +223,42 @@ def normalise_origin(origin):
     return scheme + "://" + host + (":" + port if port else "")
 
 
-def build_join_url(origin, vdo_room, profile, name, salt=None, in_fragment=False):
+_PASSWORD_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+_PASSWORD_MAX = 49
+
+
+def _valid_password(password):
+    """True for 1 to 49 ASCII letters and digits, the shape Iris generates."""
+    if not isinstance(password, str) or not 1 <= len(password) <= _PASSWORD_MAX:
+        return False
+    return all(ch in _PASSWORD_CHARS for ch in password)
+
+
+def build_join_url(
+    origin, vdo_room, profile, name, salt=None, password=None, in_fragment=False
+):
     """Build the vdo.ninja URL for one participant.
 
     The origin and profile are revalidated here, so no caller can bypass them.
-    With `in_fragment` the room, label and salt go after `#`, so the vdo.ninja
-    host never receives them in a request, and the profile stays in the query.
+    With `in_fragment` the room, label, password and salt go after `#`, so the
+    vdo.ninja host never receives them in a request, and the profile stays in
+    the query. A password is only ever placed in the fragment: asking for one
+    with `in_fragment` off raises ValueError, as does a password that is not 1
+    to 49 letters and digits. The error text never carries the password.
     """
     base = normalise_origin(origin)
     clean = validate_profile(profile)
     if not vdo_room:
         raise ValueError("vdo_room is empty")
+    if password is not None:
+        if not _valid_password(password):
+            raise ValueError("password must be 1 to 49 letters and digits")
+        if not in_fragment:
+            raise ValueError("a password can only go in the fragment")
     identity = ["room=" + quote(vdo_room), "label=" + quote(name or "")]
     if in_fragment:
+        if password:
+            identity.append("password=" + password)
         if salt:
             identity.append("salt=" + quote(salt))
         query = "?" + clean if clean else ""

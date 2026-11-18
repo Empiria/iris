@@ -236,6 +236,104 @@ def test_build_join_url_fragment_carries_salt(vdo):
     assert url == "https://vdo.ninja/#room=r1&label=A&salt=s"
 
 
+PASSWORD = "0123456789abcdef01234567"
+
+
+def test_build_join_url_fragment_carries_the_password_after_the_label(vdo):
+    url = vdo.build_join_url(
+        "https://vdo.ninja",
+        "r1",
+        SCREEN_SHARE,
+        "A",
+        salt="s",
+        password=PASSWORD,
+        in_fragment=True,
+    )
+
+    assert url == (
+        f"https://vdo.ninja/?{SCREEN_SHARE}#room=r1&label=A&password={PASSWORD}&salt=s"
+    )
+
+
+def test_build_join_url_password_never_goes_in_the_query(vdo):
+    query_part = vdo.build_join_url(
+        "https://vdo.ninja", "r1", "", "A", password=PASSWORD, in_fragment=True
+    ).split("#")[0]
+
+    assert PASSWORD not in query_part
+    with pytest.raises(ValueError) as refused:
+        vdo.build_join_url(
+            "https://vdo.ninja", "r1", "", "A", password=PASSWORD, in_fragment=False
+        )
+    assert PASSWORD not in str(refused.value)
+
+
+def test_build_join_url_without_a_password_is_unchanged(vdo):
+    for in_fragment in (False, True):
+        assert vdo.build_join_url(
+            "https://vdo.ninja",
+            "r1",
+            SCREEN_SHARE,
+            "A",
+            salt="s",
+            in_fragment=in_fragment,
+        ) == vdo.build_join_url(
+            "https://vdo.ninja",
+            "r1",
+            SCREEN_SHARE,
+            "A",
+            salt="s",
+            password=None,
+            in_fragment=in_fragment,
+        )
+    assert "password" not in vdo.build_join_url("https://vdo.ninja", "r1", "", "A")
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "",
+        "a" * 50,
+        "has space",
+        "a&b",
+        "a#b",
+        "a=b",
+        "pass%20",
+        "naïve",
+        "名前",
+        5,
+        b"abc",
+    ],
+    ids=[
+        "empty",
+        "too-long",
+        "space",
+        "amp",
+        "hash",
+        "equals",
+        "percent",
+        "accent",
+        "cjk",
+        "int",
+        "bytes",
+    ],
+)
+def test_build_join_url_refuses_a_bad_password(vdo, bad):
+    with pytest.raises(ValueError):
+        vdo.build_join_url(
+            "https://vdo.ninja", "r1", "", "A", password=bad, in_fragment=True
+        )
+
+
+@pytest.mark.parametrize("good", ["a", "A1", "a" * 49, "Z9z0"])
+def test_build_join_url_accepts_one_to_forty_nine_alphanumerics(vdo, good):
+    url = vdo.build_join_url(
+        "https://vdo.ninja", "r1", "", "A", password=good, in_fragment=True
+    )
+
+    assert "&password=" + good in url
+
+
 @pytest.mark.parametrize("in_fragment", [False, True])
 def test_build_join_url_never_emits_meshcast_or_relay(vdo, in_fragment):
     url = vdo.build_join_url(

@@ -239,7 +239,7 @@ def test_the_default_origin_is_named_only_in_vdo_py():
     assert found == ["client_code/services/vdo.py"]
 
 
-def test_join_py_imports_only_slugs_and_vdo_and_touches_no_table():
+def test_join_py_imports_only_sibling_services_and_touches_no_table():
     tree = ast.parse((ROOT / "client_code/services/join.py").read_text("utf-8"))
     imported = set()
     names = set()
@@ -254,5 +254,157 @@ def test_join_py_imports_only_slugs_and_vdo_and_touches_no_table():
         elif isinstance(node, ast.Attribute):
             names.add(node.attr)
 
-    assert imported == {"iris.services", "slugs", "vdo"}
+    assert imported == {"iris.services", "passphrase", "slugs", "vdo"}
     assert "app_tables" not in names
+
+
+# --- permanent rooms: the locked state and the unlock step -----------------
+
+SAMPLE_PASSPHRASE = "abcd-efgh-jkmn"
+PASSWORD = "0123456789abcdef01234567"
+
+
+def _unlocked(**changes):
+    found = _found(salt=None, password=PASSWORD, kind="permanent")
+    found.update(changes)
+    return found
+
+
+def test_a_locked_permanent_reply_is_the_locked_state(join):
+    reply = {"kind": "permanent", "locked": True}
+
+    result = join.load_meeting("acme-board", lambda *a: reply)
+
+    assert result == {"state": "locked"}
+
+
+def test_a_one_off_reply_with_a_kind_is_still_ready(join):
+    reply = _found(kind="one-off")
+
+    assert join.load_meeting("dk2wjd9d", lambda *a: reply) == {
+        "state": "ready",
+        "found": reply,
+    }
+
+
+def test_a_permanent_reply_that_is_not_locked_is_not_taken_as_ready(join):
+    reply = {"kind": "permanent", "locked": False}
+
+    assert join.load_meeting("acme-board", lambda *a: reply) == {"state": "missing"}
+
+
+def test_unlock_calls_the_server_with_the_normalised_passphrase(join):
+    calls = []
+    reply = {"ok": True, "found": _unlocked()}
+
+    def call(name, *args):
+        calls.append((name, args))
+        return reply
+
+    result = join.unlock(" Acme-Board ", " ABCD EFGH-jkmn ", call)
+
+    assert result == {"state": "ready", "found": reply["found"]}
+    assert calls == [("unlock_room", ("acme-board", "abcdefghjkmn"))]
+
+
+@pytest.mark.parametrize("reason", ["incorrect", "throttled", "missing", "empty"])
+def test_unlock_maps_each_refusal_to_its_state(join, reason):
+    reply = {"ok": False, "reason": reason}
+
+    assert join.unlock("acme-board", SAMPLE_PASSPHRASE, lambda *a: reply) == {
+        "state": reason
+    }
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [None, {}, {"ok": False}, {"ok": False, "reason": "surprise"}, {"ok": True}, 5],
+)
+def test_unlock_treats_an_unexpected_reply_as_an_error(join, reply):
+    assert join.unlock("acme-board", SAMPLE_PASSPHRASE, lambda *a: reply) == {
+        "state": "error"
+    }
+
+
+def test_unlock_exception_is_the_error_state_with_no_text(join):
+    def call(*args):
+        raise RuntimeError("detail " + SAMPLE_PASSPHRASE)
+
+    assert join.unlock("acme-board", SAMPLE_PASSPHRASE, call) == {"state": "error"}
+
+
+@pytest.mark.parametrize("text", ["", "   ", "- -", None, 5])
+def test_unlock_with_nothing_typed_makes_no_server_call(join, text):
+    calls = []
+
+    result = join.unlock("acme-board", text, lambda *a: calls.append(a))
+
+    assert result == {"state": "empty"}
+    assert calls == []
+
+
+def test_unlock_with_an_oversized_input_makes_no_server_call(join):
+    calls = []
+
+    result = join.unlock("acme-board", "x" * 500, lambda *a: calls.append(a))
+
+    assert result == {"state": "incorrect"}
+    assert calls == []
+
+
+@pytest.mark.parametrize("slug", ["staff", "ab", "", None, "../x"])
+def test_unlock_of_a_slug_that_is_not_joinable_never_calls(join, slug):
+    calls = []
+
+    result = join.unlock(slug, SAMPLE_PASSPHRASE, lambda *a: calls.append(a))
+
+    assert result == {"state": "missing"}
+    assert calls == []
+
+
+def test_the_unlock_messages_are_fixed(join):
+    assert join.UNLOCK_MESSAGES == {
+        "incorrect": "Incorrect passphrase. Check it and try again.",
+        "throttled": "Too many attempts. Try again in a few minutes.",
+        "empty": "Enter the passphrase.",
+        "missing": "This meeting no longer exists.",
+    }
+
+
+def test_join_url_passes_the_password_in_the_fragment(join):
+    url = join.join_url(_unlocked(), "Ann Lee", in_fragment=True)
+
+    assert url == (
+        f"{ORIGIN}/?{PROFILE}#room={VDO_ROOM}&label=Ann%20Lee&password={PASSWORD}"
+    )
+
+
+def test_join_url_refuses_a_password_in_the_query(join):
+    with pytest.raises(ValueError):
+        join.join_url(_unlocked(), "Ann", in_fragment=False)
+
+
+def test_join_url_without_a_password_is_unchanged(join):
+    assert "password" not in join.join_url(_found(), "Ann")
+    assert join.join_url(_found(kind="one-off"), "Ann") == join.join_url(
+        _found(), "Ann"
+    )
+
+
+@pytest.fixture
+def passphrase_module(load_client_module):
+    return load_client_module("services/passphrase")
+
+
+@pytest.mark.parametrize("in_fragment", [True])
+def test_the_hand_off_url_never_contains_the_passphrase(
+    join, passphrase_module, in_fragment
+):
+    normalised = passphrase_module.normalise(SAMPLE_PASSPHRASE)
+
+    url = join.join_url(_unlocked(), "Ann Lee", in_fragment=in_fragment)
+
+    assert SAMPLE_PASSPHRASE not in url
+    assert normalised not in url
+    assert PASSWORD in url.split("#", 1)[1]
+    assert PASSWORD not in url.split("#", 1)[0]
