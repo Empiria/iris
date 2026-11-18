@@ -98,7 +98,7 @@ def test_setting_methods_are_registered_server_methods(Setting):
     assert {"Setting.vdo_config", "Setting.get_value"} <= registered
 
 
-# --- set_profile and get_profile (staff only) -----------------------------
+# --- set_profile and get_profile (admin only) -----------------------------
 
 
 @pytest.fixture
@@ -107,8 +107,8 @@ def permissions(load_client_module):
 
 
 @pytest.fixture
-def staff(as_user, make_user):
-    user = make_user(email="staff@example.test", is_staff=True)
+def admin(as_user, make_user):
+    user = make_user(email="admin@example.test", is_admin=True)
     as_user(user)
     return user
 
@@ -118,7 +118,7 @@ def _profile_rows(tables):
 
 
 def test_set_profile_stores_the_normalised_profile_and_returns_it(
-    Setting, tables, staff
+    Setting, tables, admin
 ):
     result = Setting.set_profile("&quality=1&screensharequality=2")
 
@@ -128,7 +128,7 @@ def test_set_profile_stores_the_normalised_profile_and_returns_it(
     assert rows[0]["value"] == "quality=1&screensharequality=2"
 
 
-def test_set_profile_updates_the_existing_row_and_saves_it(Setting, tables, staff):
+def test_set_profile_updates_the_existing_row_and_saves_it(Setting, tables, admin):
     _put(tables, "vdo_profile", "old=1")
     existing = _profile_rows(tables)[0]
 
@@ -139,7 +139,7 @@ def test_set_profile_updates_the_existing_row_and_saves_it(Setting, tables, staf
     assert existing.saves >= 1
 
 
-def test_the_next_vdo_config_uses_the_saved_profile(Setting, tables, staff):
+def test_the_next_vdo_config_uses_the_saved_profile(Setting, tables, admin):
     Setting.set_profile("quality=1")
 
     assert Setting.vdo_config()["profile"] == "quality=1"
@@ -147,7 +147,7 @@ def test_the_next_vdo_config_uses_the_saved_profile(Setting, tables, staff):
     assert Setting.vdo_config()["profile"] == "quality=2"
 
 
-def test_set_profile_accepts_the_empty_profile(Setting, tables, staff):
+def test_set_profile_accepts_the_empty_profile(Setting, tables, admin):
     _put(tables, "vdo_profile", "quality=1")
 
     assert Setting.set_profile("") == ""
@@ -160,7 +160,7 @@ def test_set_profile_accepts_the_empty_profile(Setting, tables, staff):
     "bad", ["&meshcast", "&relay", "&password=x", "&room=x", "&salt=x", "&hash=x"]
 )
 def test_set_profile_refuses_a_bad_profile_and_keeps_the_old_one(
-    Setting, tables, staff, bad
+    Setting, tables, admin, bad
 ):
     _put(tables, "vdo_profile", "quality=1")
 
@@ -172,7 +172,7 @@ def test_set_profile_refuses_a_bad_profile_and_keeps_the_old_one(
 
 
 def test_set_profile_refuses_a_bad_profile_without_creating_a_row(
-    Setting, tables, staff
+    Setting, tables, admin
 ):
     with pytest.raises(ValueError):
         Setting.set_profile("&meshcast")
@@ -181,7 +181,7 @@ def test_set_profile_refuses_a_bad_profile_without_creating_a_row(
 
 
 def test_set_profile_refuses_input_over_2000_characters_before_validating(
-    Setting, tables, staff, monkeypatch, load_client_module
+    Setting, tables, admin, monkeypatch, load_client_module
 ):
     vdo = load_client_module("services/vdo")
     seen = []
@@ -194,32 +194,32 @@ def test_set_profile_refuses_input_over_2000_characters_before_validating(
     assert _profile_rows(tables) == []
 
 
-def test_set_profile_accepts_exactly_2000_characters(Setting, tables, staff):
+def test_set_profile_accepts_exactly_2000_characters(Setting, tables, admin):
     text = "q=" + "a" * 1998
 
     assert Setting.set_profile(text) == text
 
 
 @pytest.mark.parametrize("bad", [None, 5, b"quality=1", ["quality=1"]])
-def test_set_profile_refuses_a_non_string(Setting, tables, staff, bad):
+def test_set_profile_refuses_a_non_string(Setting, tables, admin, bad):
     with pytest.raises(ValueError):
         Setting.set_profile(bad)
 
     assert _profile_rows(tables) == []
 
 
-def test_get_profile_returns_the_raw_stored_text(Setting, tables, staff):
+def test_get_profile_returns_the_raw_stored_text(Setting, tables, admin):
     assert Setting.get_profile() == ""
     _put(tables, "vdo_profile", "quality=1")
 
     assert Setting.get_profile() == "quality=1"
 
 
-@pytest.mark.parametrize("who", ["anonymous", "non-staff"])
-def test_set_and_get_profile_refuse_anyone_but_staff(
+@pytest.mark.parametrize("who", ["anonymous", "non-admin"])
+def test_set_and_get_profile_refuse_anyone_but_admin(
     Setting, tables, permissions, as_user, make_user, who
 ):
-    as_user(None if who == "anonymous" else make_user(is_staff=False))
+    as_user(None if who == "anonymous" else make_user(is_admin=False))
     _put(tables, "vdo_profile", "quality=1")
 
     with pytest.raises(permissions.PermissionDenied):

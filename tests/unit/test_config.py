@@ -19,7 +19,7 @@ USERS_COLUMNS = {
     "confirmed_email",
     "signed_up",
     "remembered_logins",
-    "is_staff",
+    "is_admin",
 }
 
 
@@ -59,7 +59,7 @@ def test_users_table_columns(config):
     columns = {c["name"]: c["type"] for c in config["db_schema"]["users"]["columns"]}
 
     assert set(columns) == USERS_COLUMNS
-    assert columns["is_staff"] == "bool"
+    assert columns["is_admin"] == "bool"
 
 
 @pytest.mark.parametrize("table", ["users", "room", "setting"])

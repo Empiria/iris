@@ -9,7 +9,7 @@ RESULTS = (
     ROOT
     / ".planning"
     / "phases"
-    / "02-one-off-meetings-staff-to-client"
+    / "02-one-off-meetings-admin-to-client"
     / "02-SPIKE-RESULTS.md"
 )
 
@@ -78,13 +78,16 @@ def test_link_for_rejects_bad_input(links, base, slug, owner):
 @pytest.mark.parametrize(
     "origin, pathname, expected",
     [
-        ("https://meet.example", "/staff", "https://meet.example"),
-        ("https://x.anvil.app", "/KEY/staff", "https://x.anvil.app/KEY"),
-        ("http://localhost:3030", "/staff/", "http://localhost:3030"),
+        ("https://meet.example", "/admin", "https://meet.example"),
+        ("https://x.anvil.app", "/KEY/admin", "https://x.anvil.app/KEY"),
+        ("http://localhost:3030", "/admin/", "http://localhost:3030"),
         ("http://localhost:3030", "/", "http://localhost:3030"),
         ("https://meet.example", "/KEY", "https://meet.example/KEY"),
-        ("https://meet.example/", "/staff", "https://meet.example"),
+        ("https://meet.example/", "/admin", "https://meet.example"),
         ("https://meet.example", "", "https://meet.example"),
+        # The page's old path, still reachable from existing bookmarks.
+        ("https://meet.example", "/staff", "https://meet.example"),
+        ("https://x.anvil.app", "/KEY/staff/", "https://x.anvil.app/KEY"),
     ],
 )
 def test_base_from_location(links, origin, pathname, expected):

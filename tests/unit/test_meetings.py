@@ -27,8 +27,8 @@ def links(load_client_module):
 
 
 @pytest.fixture
-def staff(as_user, make_user):
-    user = make_user(email="staff@example.test", is_staff=True)
+def admin(as_user, make_user):
+    user = make_user(email="admin@example.test", is_admin=True)
     as_user(user)
     return user
 
@@ -36,7 +36,7 @@ def staff(as_user, make_user):
 # --- registration ---------------------------------------------------------
 
 
-def test_create_one_off_link_requires_staff(meetings, load_client_module):
+def test_create_one_off_link_requires_admin(meetings, load_client_module):
     permissions = load_client_module("services/permissions")
     found = [
         r
@@ -45,13 +45,13 @@ def test_create_one_off_link_requires_staff(meetings, load_client_module):
     ]
 
     assert len(found) == 1
-    assert found[0].kwargs.get("require_user") is permissions.is_staff
+    assert found[0].kwargs.get("require_user") is permissions.is_admin
 
 
 # --- create_one_off_link --------------------------------------------------
 
 
-def test_returns_slug_and_title_and_stores_one_row(meetings, tables, staff, slugs):
+def test_returns_slug_and_title_and_stores_one_row(meetings, tables, admin, slugs):
     result = meetings.create_one_off_link("Kickoff")
 
     assert set(result) == {"slug", "title"}
@@ -63,12 +63,12 @@ def test_returns_slug_and_title_and_stores_one_row(meetings, tables, staff, slug
     assert row["slug"] == result["slug"]
     assert row["kind"] == "one-off"
     assert row["active"] is True
-    assert row["created_by"] == "staff@example.test"
+    assert row["created_by"] == "admin@example.test"
     assert len(row["vdo_room"]) == 20
     assert row["vdo_room"] != result["slug"]
 
 
-def test_two_calls_give_two_links_and_two_rooms(meetings, tables, staff):
+def test_two_calls_give_two_links_and_two_rooms(meetings, tables, admin):
     first = meetings.create_one_off_link("")
     second = meetings.create_one_off_link("")
 
@@ -78,7 +78,7 @@ def test_two_calls_give_two_links_and_two_rooms(meetings, tables, staff):
 
 
 def test_the_reply_and_the_link_never_contain_the_vdo_room(
-    meetings, tables, staff, links
+    meetings, tables, admin, links
 ):
     result = meetings.create_one_off_link("Kickoff")
     vdo_room = tables.room.rows[0]["vdo_room"]
@@ -102,10 +102,10 @@ def test_signed_out_is_refused_and_writes_nothing(meetings, tables, as_user):
 
 
 @pytest.mark.parametrize("flag", [False, None])
-def test_non_staff_is_refused_and_writes_nothing(
+def test_non_admin_is_refused_and_writes_nothing(
     meetings, tables, as_user, make_user, flag
 ):
-    as_user(make_user(is_staff=flag))
+    as_user(make_user(is_admin=flag))
 
     with pytest.raises(anvil.server.PermissionDenied):
         meetings.create_one_off_link("x")
@@ -114,29 +114,29 @@ def test_non_staff_is_refused_and_writes_nothing(
     assert tables.room.reads == 0
 
 
-def test_the_title_is_cleaned_before_it_is_stored(meetings, tables, staff):
+def test_the_title_is_cleaned_before_it_is_stored(meetings, tables, admin):
     result = meetings.create_one_off_link("  Kick\toff\n ")
 
     assert result["title"] == "Kick off"
     assert tables.room.rows[0]["title"] == "Kick off"
 
 
-def test_a_blank_title_is_stored_as_empty(meetings, tables, staff):
+def test_a_blank_title_is_stored_as_empty(meetings, tables, admin):
     result = meetings.create_one_off_link("   ")
 
     assert result["title"] == ""
     assert tables.room.rows[0]["title"] == ""
 
 
-def test_the_title_defaults_to_empty(meetings, tables, staff):
+def test_the_title_defaults_to_empty(meetings, tables, admin):
     assert meetings.create_one_off_link()["title"] == ""
 
 
-# --- STAFF-07, pinned from the creation side ------------------------------
+# --- ADMIN-07, pinned from the creation side ------------------------------
 
 
 def test_lookup_finds_the_created_room_and_nothing_else(
-    meetings, Room, tables, staff, slugs
+    meetings, Room, tables, admin, slugs
 ):
     result = meetings.create_one_off_link("Kickoff")
     stored = tables.room.rows[0]["vdo_room"]
@@ -181,13 +181,6 @@ def test_clean_title_rejects_non_text(meetings, raw):
         meetings.clean_title(raw)
 
 
-@pytest.fixture
-def admin(as_user, make_user):
-    user = make_user(email="admin@example.test", is_staff=True)
-    as_user(user)
-    return user
-
-
 # --- create_permanent_room ------------------------------------------------
 
 
@@ -211,7 +204,7 @@ def test_create_permanent_room_requires_an_admin(meetings, load_client_module):
 
     registration = _callable("create_permanent_room")
 
-    assert registration.kwargs.get("require_user") is permissions.is_staff
+    assert registration.kwargs.get("require_user") is permissions.is_admin
 
 
 def test_create_permanent_room_returns_slug_title_and_passphrase(
@@ -287,7 +280,7 @@ def test_create_permanent_room_refuses_non_text(meetings, tables, admin, fast_kd
 def test_create_permanent_room_the_model_refuses_a_non_admin_caller(
     meetings, tables, as_user, make_user, fast_kdf
 ):
-    as_user(make_user(email="viewer@example.test", is_staff=False))
+    as_user(make_user(email="viewer@example.test", is_admin=False))
 
     with pytest.raises(anvil.server.PermissionDenied):
         meetings.create_permanent_room("Acme Board")
@@ -341,7 +334,7 @@ def test_lookup_room_of_a_permanent_slug_is_locked_for_everyone(
     assert meetings.lookup_room("ACME-BOARD") == {"kind": "permanent", "locked": True}
 
 
-# --- room management callables (STAFF-04, D-7, D-8) -----------------------
+# --- room management callables (ADMIN-04, D-7, D-8) -----------------------
 
 MANAGEMENT_CALLABLES = ("list_rooms", "update_room", "delete_room", "rotate_passphrase")
 
@@ -360,7 +353,7 @@ def _manage(meetings, name):
 def test_management_callables_require_an_admin(meetings, load_client_module, name):
     permissions = load_client_module("services/permissions")
 
-    assert _callable(name).kwargs.get("require_user") is permissions.is_staff
+    assert _callable(name).kwargs.get("require_user") is permissions.is_admin
 
 
 def test_list_rooms_returns_plain_summaries_without_secrets(
@@ -512,7 +505,7 @@ def test_management_callables_refuse_non_admin_and_touch_nothing(
     meetings.create_permanent_room("Acme Board", "Acme quarterly")
     before = [dict(r._values) for r in tables.room.rows]
     reads = tables.room.reads
-    as_user(make_user(email="viewer@example.test", is_staff=False))
+    as_user(make_user(email="viewer@example.test", is_admin=False))
 
     with pytest.raises(anvil.server.PermissionDenied):
         _manage(meetings, name)

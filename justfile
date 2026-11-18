@@ -198,10 +198,13 @@ logs: (_need-podman "logs")
 seed: _need-stack
     uv run --script tools/dev_seed.py
 
-# [host] Create the first staff account on the local stack: `just create-staff --dev` or `just create-staff you@example.com`.
-# Needs the stack up, so it is host-only like seed. A hosted app runs scripts/CreateStaff.py from the Anvil editor instead.
-create-staff *args: _need-stack
-    uv run --script tools/create_staff.py {{ args }}
+# The recipe was called create-staff before the staff-to-admin rename.
+alias create-staff := create-admin
+
+# [host] Create the first admin account on the local stack: `just create-admin --dev` or `just create-admin you@example.com`.
+# Needs the stack up, so it is host-only like seed. A hosted app runs scripts/CreateAdmin.py from the Anvil editor instead.
+create-admin *args: _need-stack
+    uv run --script tools/create_admin.py {{ args }}
 
 # [host] Browser tests against the running stack (needs the stack up).
 # Host-only: a worker sandbox can't reach the host stack (see AGENTS.md).

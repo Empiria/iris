@@ -1,4 +1,4 @@
-"""Create a permanent room on the admin page and join it (STAFF-03, JOIN-02).
+"""Create a permanent room on the admin page and join it (ADMIN-03, JOIN-02).
 
 Runs against the live local stack. Each test makes a room with a unique name,
 and a fixture deletes it over the privileged uplink afterwards. Never waits for
@@ -46,9 +46,9 @@ def _create_permanent(page: Page, name: str, title: str = ""):
 
 
 def test_admin_creates_permanent_room_and_sees_passphrase_once(
-    staff_page: Page, room_name
+    admin_page: Page, room_name
 ):
-    page = staff_page
+    page = admin_page
     origin = page.evaluate("location.origin")
 
     _create_permanent(page, room_name, "Weekly sync")
@@ -82,8 +82,8 @@ def test_admin_creates_permanent_room_and_sees_passphrase_once(
     assert shown not in page.locator("body").inner_text()
 
 
-def test_duplicate_name_is_refused(staff_page: Page, room_name):
-    page = staff_page
+def test_duplicate_name_is_refused(admin_page: Page, room_name):
+    page = admin_page
 
     _create_permanent(page, room_name)
     expect(page.get_by_label("Passphrase")).to_have_value(
@@ -100,10 +100,10 @@ def test_duplicate_name_is_refused(staff_page: Page, room_name):
     assert not page.get_by_text(ERROR_BANNER).is_visible()
 
 
-def test_reserved_name_is_refused(staff_page: Page, uplink):
+def test_reserved_name_is_refused(admin_page: Page, uplink):
     from anvil.tables import app_tables
 
-    page = staff_page
+    page = admin_page
 
     _create_permanent(page, "admin")
 
@@ -114,15 +114,15 @@ def test_reserved_name_is_refused(staff_page: Page, uplink):
 
 
 def test_client_joins_new_permanent_room_with_shown_passphrase(
-    staff_page: Page, browser: Browser, base_url: str, room_name
+    admin_page: Page, browser: Browser, base_url: str, room_name
 ):
-    _create_permanent(staff_page, room_name, "Client check")
-    passphrase = staff_page.get_by_label("Passphrase")
+    _create_permanent(admin_page, room_name, "Client check")
+    passphrase = admin_page.get_by_label("Passphrase")
     expect(passphrase).to_have_value(
         re.compile("^" + PASSPHRASE + "$"), timeout=VISIBLE_MS
     )
     shown = passphrase.input_value()
-    link = staff_page.get_by_label("Meeting link").input_value()
+    link = admin_page.get_by_label("Meeting link").input_value()
 
     context = browser.new_context(base_url=base_url)
     client = context.new_page()

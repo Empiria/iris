@@ -13,11 +13,11 @@ E2E_PERMANENT = ROOT / "tests" / "e2e" / "test_permanent_room.py"
 
 @pytest.fixture
 def seed(load_tool, monkeypatch):
-    # dev_seed imports its siblings create_staff and stack_url by bare name.
+    # dev_seed imports its siblings create_admin and stack_url by bare name.
     monkeypatch.syspath_prepend(str(ROOT / "tools"))
     module = load_tool("dev_seed")
     yield module
-    for name in ("create_staff", "stack_url"):
+    for name in ("create_admin", "stack_url"):
         sys.modules.pop(name, None)
 
 
@@ -35,7 +35,7 @@ def test_the_first_run_creates_the_room_and_the_two_settings(seed, tables):
     assert room["title"] == seed.DEV_ROOM_TITLE
     assert room["kind"] == "one-off"
     assert room["active"] is True
-    assert room["created_by"] == seed.create_staff.DEV_STAFF_EMAIL
+    assert room["created_by"] == seed.create_admin.DEV_ADMIN_EMAIL
     assert room["created"] is not None
     assert _setting(tables, "vdo_origin") == seed.DEV_VDO_ORIGIN
     assert _setting(tables, "vdo_profile") == seed.DEV_VDO_PROFILE
@@ -112,7 +112,7 @@ def test_the_first_run_creates_the_permanent_room(seed, tables):
     assert room["vdo_password"] == seed.SEEDED_PERMANENT_VDO_PASSWORD
     assert room["failed_unlocks"] == 0
     assert room["locked_until"] is None
-    assert room["created_by"] == seed.create_staff.DEV_STAFF_EMAIL
+    assert room["created_by"] == seed.create_admin.DEV_ADMIN_EMAIL
 
 
 def test_the_seeded_verifier_accepts_only_the_seeded_passphrase(

@@ -8,12 +8,12 @@ install, no long URL.
 
 - **Short, memorable links.** Iris builds on [VDO.Ninja](https://vdo.ninja)'s
   peer-to-peer rooms and adds a short, Google-Meet-style address plus
-  staff-managed settings. Easy to say, paste and trust.
+  admin-managed settings. Easy to say, paste and trust.
 - **Peer-to-peer calls.** Rooms are VDO.Ninja rooms, so media goes directly
   between participants. Iris never forces a relay.
-- **No accounts for guests.** Clients open the link and join. Only your staff
+- **No accounts for guests.** Clients open the link and join. Only your admins
   sign in.
-- **Your call settings, applied for you.** Staff control the quality profile
+- **Your call settings, applied for you.** Admins control the quality profile
   once (for example sharp screen sharing, AV1 first) and every call uses it.
 - **Works well across browsers.** The room opens inside the Iris page where
   that is smooth, and hands off straight to VDO.Ninja where that is better.
@@ -30,19 +30,20 @@ install, no long URL.
 
 ## Who it is for
 
-A member of staff creates a link, the client opens it, and both land in a
+An admin creates a link, the client opens it, and both land in a
 peer-to-peer VDO.Ninja call with your call settings already applied. The client
 never sees the query string.
 
 ## How it works
 
-### Staff
+### Admins
 
-Staff open the app root (`/`; `/staff` is an alias) and sign in with an email
-and password. Sign-up is off: staff accounts are created by an administrator
-(see [Install](#install)). A signed-in
-member of staff can give a link an optional title and create it. The link is
-copied to the clipboard, and can be copied again from the page.
+Admins open the app root (`/`; `/admin` is an alias, and the older `/staff`
+still works for existing bookmarks) and sign in with an email and password.
+Sign-up is off: admin accounts are created by a deployer (see
+[Install](#install)). A signed-in admin can give a link an optional title and
+create it. The link is copied to the clipboard, and can be copied again from
+the page.
 
 Each one-off link is a recorded `room` row with its own slug and a separate
 random VDO.Ninja room name. VDO.Ninja rooms are created on demand by name, so
@@ -127,10 +128,11 @@ documented steps and has not been re-run for this README.
    [environment](https://anvil.works/docs/deployment/environments).
 4. **Set the [secrets](https://anvil.works/docs/workflows/security/encrypting-secret-data).**
    Secret values can't be copied between apps, so re-enter them. Iris needs
-   `iris_staff_email` and optionally `iris_staff_password`.
-5. **Create the first staff user.** Sign-up is off, so
-   `scripts/CreateStaff.py` is the only way the first account comes to exist,
-   and it refuses to run once a staff user exists. Press Run on `CreateStaff` in
+   `iris_admin_email` and optionally `iris_admin_password`. The earlier names
+   `iris_staff_email` and `iris_staff_password` are still read as a fallback.
+5. **Create the first admin user.** Sign-up is off, so
+   `scripts/CreateAdmin.py` is the only way the first account comes to exist,
+   and it refuses to run once an admin user exists. Press Run on `CreateAdmin` in
    the editor, read its output, then delete the password secret. With no
    password set, a random one is printed once on a line
    `generated password: ...`.
@@ -164,8 +166,8 @@ pinned in `anvil.yaml` (no login) and builds an image with `anvil-app-server`
 - `--uplink-key`, a fixed development value.
 
 Packages in `server_code/requirements.txt` are installed into the image. Create
-the first admin with `just create-staff you@example.com` (or `--dev`), which
-runs `scripts/CreateStaff.py` over the uplink; a generated password is in
+the first admin with `just create-admin you@example.com` (or `--dev`), which
+runs `scripts/CreateAdmin.py` over the uplink; a generated password is in
 `just logs`. Then add the `vdo_profile` rows to the `setting` table.
 
 **Production self-hosting is untested.** Nobody has yet run Iris this way beyond
@@ -177,12 +179,12 @@ the local stack, so treat the following as a starting point:
 - Put a TLS reverse proxy (with websocket support) in front, and set `--origin`
   to the public `https://` URL.
 - Keep and back up the database volume.
-- For the first admin, `scripts/CreateStaff.py` also reads `IRIS_STAFF_EMAIL`
-  and `IRIS_STAFF_PASSWORD` from the environment, and `tools/create_staff.py`
+- For the first admin, `scripts/CreateAdmin.py` also reads `IRIS_ADMIN_EMAIL`
+  and `IRIS_ADMIN_PASSWORD` from the environment, and `tools/create_admin.py`
   honours `IRIS_UPLINK_URL` and `IRIS_UPLINK_KEY`, but only for a `ws://` URL on
   localhost, so run it on the server or through an SSH tunnel. Untested against
   a non-development server.
-- Iris reads secrets only in `CreateStaff`, which falls back to the environment,
+- Iris reads secrets only in `CreateAdmin`, which falls back to the environment,
   so no secrets are needed to start.
 
 ## Local development
@@ -223,11 +225,11 @@ Run `just` to list every recipe. `just verify` is the gate before a commit.
 ## Project layout
 
 - `anvil.yaml`: app config, dependencies, services and the Data Tables schema
-- `client_code/`: forms (`Staff`, `Join`, `MeetingFrame`), the routes and
+- `client_code/`: forms (`Admin`, `Join`, `MeetingFrame`), the routes and
   `services/` (hand-off, VDO.Ninja URL rules, slugs, models). Client code runs
   on Skulpt, and is imported as `iris.*`
 - `server_code/`: server modules (`meetings.py`, `auth.py`, `health.py`)
-- `scripts/CreateStaff.py`: creates the first staff user
+- `scripts/CreateAdmin.py`: creates the first admin user
 - `theme/`: colour parameters and `assets/theme.css`, which holds all styling
 - `tools/`: dependency fetch, local seeding, the leftovers check and helpers
 - `tests/unit/`, `tests/e2e/`: the two test suites
@@ -236,11 +238,11 @@ Run `just` to list every recipe. `just verify` is the gate before a commit.
 
 ## Status and known limits
 
-**Built:** staff sign-in, one-off links, the client join page, the iframe and
+**Built:** admin sign-in, one-off links, the client join page, the iframe and
 redirect hand-off, and the call-settings profile.
 
 **Planned:** permanent named rooms (for example `/infinite-worlds`) protected by
-a passphrase, and the staff tools to manage them. The `room` table already has
+a passphrase, and the admin tools to manage them. The `room` table already has
 a `kind` column for them. Expiring or one-time links, invites, a join audit and
 a waiting room are outside v1.
 

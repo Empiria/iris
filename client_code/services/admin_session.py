@@ -1,7 +1,7 @@
-"""Client-side staff sign-in state for the /staff page.
+"""Client-side admin sign-in state for the /admin page.
 
 `state.status` is a reactive signal: None while unknown, then the dict that the
-`staff_status` callable returns. The server decides who is staff; this module
+`admin_status` callable returns. The server decides who is admin; this module
 only mirrors the answer so the page can show the right card. The password is a
 parameter of `sign_in` and is never stored.
 """
@@ -12,7 +12,7 @@ from anvil_reactive.main import signal
 
 from iris.services import password_reset  # pyright: ignore[reportAttributeAccessIssue]
 
-SIGNED_OUT = {"signed_in": False, "is_staff": False, "email": None}
+SIGNED_OUT = {"signed_in": False, "is_admin": False, "email": None}
 
 
 class SignInError(Exception):
@@ -33,7 +33,7 @@ def refresh():
         # service's own reset dialog here, before the sign-in form shows.
         password_reset.offer_pending_reset()
     try:
-        state.status = anvil.server.call("staff_status")
+        state.status = anvil.server.call("admin_status")
     except Exception:
         # Show the sign-in form rather than wait forever. A real server problem
         # then shows up when the person tries to sign in.
@@ -54,16 +54,16 @@ def is_known():
     return state.status is not None
 
 
-def is_staff():
-    return bool(_field("is_staff"))
+def is_admin():
+    return bool(_field("is_admin"))
 
 
-def staff_email():
+def admin_email():
     return _field("email")
 
 
 def sign_in(email, password):
-    """Sign in, and sign straight back out if the account is not staff."""
+    """Sign in, and sign straight back out if the account is not admin."""
     try:
         anvil.users.login_with_email(email, password, remember=False)
     except anvil.users.TooManyPasswordFailures:
@@ -75,10 +75,10 @@ def sign_in(email, password):
     except anvil.users.AuthenticationFailed:
         raise SignInError("Email or password not recognised.")
     refresh()
-    if not is_staff():
+    if not is_admin():
         anvil.users.logout()
         refresh()
-        raise SignInError("This account is not a staff account.")
+        raise SignInError("This account is not an admin account.")
 
 
 def sign_out():

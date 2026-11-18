@@ -41,11 +41,14 @@ def link_for(base, slug, owner):
 def base_from_location(origin, pathname):
     """The app root from a page location: the origin plus any app-key prefix.
 
-    Drops a trailing "/staff" and trailing slashes from the pathname, so
-    ("https://x.anvil.app", "/KEY/staff") gives "https://x.anvil.app/KEY".
+    Drops a trailing "/admin" (or the older "/staff") and trailing slashes from
+    the pathname, so ("https://x.anvil.app", "/KEY/admin") gives
+    "https://x.anvil.app/KEY".
     """
     path = str(pathname or "").rstrip("/")
-    if path == "/staff" or path.endswith("/staff"):
-        path = path[: -len("/staff")]
+    for suffix in ("/admin", "/staff"):
+        if path.endswith(suffix):
+            path = path[: -len(suffix)]
+            break
     path = path.rstrip("/")
     return str(origin or "").rstrip("/") + path

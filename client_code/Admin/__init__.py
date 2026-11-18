@@ -3,19 +3,19 @@ from anvil.js import window
 from anvil_reactive.main import render_effect
 
 from iris.services import (
+    admin_session,  # pyright: ignore[reportAttributeAccessIssue]
     errors,  # pyright: ignore[reportAttributeAccessIssue]
     links,  # pyright: ignore[reportAttributeAccessIssue]
     permissions,  # pyright: ignore[reportAttributeAccessIssue]
-    staff_session,  # pyright: ignore[reportAttributeAccessIssue]
 )
 
-from ._anvil_designer import StaffTemplate
+from ._anvil_designer import AdminTemplate
 
 # The wording the page already uses when a call is refused.
-_SIGNED_OUT_TEXT = "You are not signed in as staff."
+_SIGNED_OUT_TEXT = "You are not signed in as admin."
 
 
-class Staff(StaffTemplate):
+class Admin(AdminTemplate):
     # A class default, so the render effect can read it however early it first runs.
     _profile_loaded = False
     _rooms_loaded = False
@@ -31,8 +31,8 @@ class Staff(StaffTemplate):
         self.add_event_handler("hide", self.form_hide)
 
     def form_show(self, **event_args):
-        if staff_session.state.status is None:
-            staff_session.refresh()
+        if admin_session.state.status is None:
+            admin_session.refresh()
 
     def form_hide(self, **event_args):
         # Leaving the page drops the passphrases from it.
@@ -41,14 +41,14 @@ class Staff(StaffTemplate):
     @render_effect
     def _render(self):
         # Reads the signal, so it runs again whenever the sign-in state changes.
-        known = staff_session.is_known()
-        is_staff = staff_session.is_staff()
+        known = admin_session.is_known()
+        is_admin = admin_session.is_admin()
         self.dom_nodes["loading_card"].hidden = known
-        self.dom_nodes["signin_card"].hidden = (not known) or is_staff
-        self.dom_nodes["signed_in_card"].hidden = not is_staff
-        if is_staff:
+        self.dom_nodes["signin_card"].hidden = (not known) or is_admin
+        self.dom_nodes["signed_in_card"].hidden = not is_admin
+        if is_admin:
             self.dom_nodes["signed_in_as"].textContent = "Signed in as " + str(
-                staff_session.staff_email()
+                admin_session.admin_email()
             )
             if not self._profile_loaded:
                 self._profile_loaded = True
@@ -58,7 +58,7 @@ class Staff(StaffTemplate):
                 self._load_rooms()
         else:
             # Signed out: drop the saved text from the page, and load it again
-            # the next time a staff member signs in.
+            # the next time an admin signs in.
             self._profile_loaded = False
             self.dom_nodes["profile_input"].value = ""
             self._show_profile_message("")
@@ -82,15 +82,15 @@ class Staff(StaffTemplate):
         button = self.dom_nodes["signin_button"]
         button.disabled = True
         try:
-            staff_session.sign_in(email, password)
-        except staff_session.SignInError as error:
+            admin_session.sign_in(email, password)
+        except admin_session.SignInError as error:
             self._show_message(str(error))
         finally:
             self.dom_nodes["password_input"].value = ""
             button.disabled = False
 
     def _on_sign_out(self, event, **properties):
-        staff_session.sign_out()
+        admin_session.sign_out()
 
     def _show_create_message(self, text):
         message = self.dom_nodes["create_message"]
@@ -166,7 +166,7 @@ class Staff(StaffTemplate):
             self._load_rooms()
         except permissions.PermissionDenied:
             self._show_create_message(_SIGNED_OUT_TEXT)
-            staff_session.refresh()
+            admin_session.refresh()
         except Exception as error:
             # A room name that is taken, reserved or badly formed: the server's
             # message is written for the person who typed it.
@@ -217,7 +217,7 @@ class Staff(StaffTemplate):
         except permissions.PermissionDenied:
             # Not a refresh: this runs inside the render effect, and a refresh
             # would change the signal it reads.
-            self._show_profile_message("You are not signed in as staff.")
+            self._show_profile_message("You are not signed in as admin.")
         except Exception:
             self._show_profile_message("Could not load the settings. Reload the page.")
 
@@ -231,8 +231,8 @@ class Staff(StaffTemplate):
             self.dom_nodes["profile_input"].value = saved
             self._show_profile_message("Saved. New joins use these settings.")
         except permissions.PermissionDenied:
-            self._show_profile_message("You are not signed in as staff.")
-            staff_session.refresh()
+            self._show_profile_message("You are not signed in as admin.")
+            admin_session.refresh()
         except Exception as error:
             self._show_profile_message(
                 errors.user_message(error) or "Could not save the settings. Try again."
@@ -274,7 +274,7 @@ class Staff(StaffTemplate):
             return anvil.server.call(name, *args)
         except permissions.PermissionDenied:
             self._show_rooms_message(_SIGNED_OUT_TEXT)
-            staff_session.refresh()
+            admin_session.refresh()
         except Exception as error:
             # An unknown room or a refused title: written for the person who
             # asked. The list may be stale, so it is loaded again.

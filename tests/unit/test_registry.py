@@ -1,7 +1,7 @@
-"""STAFF-06 gate: every public entry point is named here, or it requires staff.
+"""ADMIN-06 gate: every public entry point is named here, or it requires admin.
 
 The server never trusts the client, so each callable, server method and route
-the app registers must either be on an allow-list below or check staff itself.
+the app registers must either be on an allow-list below or check admin itself.
 A new registration that is neither fails this test. Adding to an allow-list is a
 deliberate public endpoint and must be justified in the plan that adds it.
 """
@@ -17,16 +17,16 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# Callables any browser may call. ping: the stack health check. staff_status:
+# Callables any browser may call. ping: the stack health check. admin_status:
 # reports only the caller's own sign-in state (plan 02-03). lookup_room: public
 # by design, returns a room only for an active recorded slug (JOIN-01, JOIN-04),
 # released to anyone holding the link (plan 02-05). unlock_room: clients without
 # accounts unlock a permanent room; checks the passphrase and is throttled
 # (plan 03-04).
-PUBLIC_CALLABLES = {"ping", "staff_status", "lookup_room", "unlock_room"}
+PUBLIC_CALLABLES = {"ping", "admin_status", "lookup_room", "unlock_room"}
 
 # Server methods any browser may call. Room.lookup is how a meeting link opens
-# and releases nothing for a slug no staff member created. Setting methods read
+# and releases nothing for a slug no admin created. Setting methods read
 # only the vdo.ninja keys that a valid link releases anyway (plan 02-02).
 # Room.unlock is the model side of unlock_room (plan 03-04).
 PUBLIC_SERVER_METHODS = {
@@ -40,8 +40,8 @@ PUBLIC_SERVER_METHODS = {
 PUBLIC_ROUTES = set()
 
 # Files that may call signup_with_email or force_login. A browser cannot launch
-# a script (spike S7d), so the first-staff script is not a public entry point.
-SIGNUP_ALLOWED = {"scripts/CreateStaff.py"}
+# a script (spike S7d), so the first-admin script is not a public entry point.
+SIGNUP_ALLOWED = {"scripts/CreateAdmin.py"}
 
 ACCOUNT_CREATORS = {"signup_with_email", "force_login"}
 CODE_DIRS = ("client_code", "server_code", "scripts")
@@ -77,7 +77,7 @@ def _of_kind(*kinds):
     return [r for r in _app_registrations() if r.kind in kinds]
 
 
-def _first_statement_calls_require_staff(func):
+def _first_statement_calls_require_admin(func):
     tree = ast.parse(textwrap.dedent(inspect.getsource(func)))
     definition = tree.body[0]
     body = list(definition.body)
@@ -99,8 +99,8 @@ def _first_statement_calls_require_staff(func):
         return False
     target = call.func
     if isinstance(target, ast.Name):
-        return target.id == "require_staff"
-    return isinstance(target, ast.Attribute) and target.attr == "require_staff"
+        return target.id == "require_admin"
+    return isinstance(target, ast.Attribute) and target.attr == "require_admin"
 
 
 def _source_files():
@@ -126,29 +126,29 @@ def _names_used(path):
 def test_the_registry_sees_the_app():
     names = {r.name for r in _app_registrations()}
 
-    assert {"ping", "staff_status", "Room.lookup", "Room.create_one_off"} <= names
+    assert {"ping", "admin_status", "Room.lookup", "Room.create_one_off"} <= names
 
 
-def test_every_callable_is_public_or_requires_staff():
+def test_every_callable_is_public_or_requires_admin():
     permissions = importlib.import_module("iris.services.permissions")
     for reg in _of_kind("callable"):
         if reg.name in PUBLIC_CALLABLES:
             continue
-        assert reg.kwargs.get("require_user") is permissions.is_staff, (
-            f"callable {reg.name} is not public and does not require staff: "
-            "add require_user=permissions.is_staff, or add it to "
+        assert reg.kwargs.get("require_user") is permissions.is_admin, (
+            f"callable {reg.name} is not public and does not require admin: "
+            "add require_user=permissions.is_admin, or add it to "
             "PUBLIC_CALLABLES and justify it"
         )
 
 
-def test_every_server_method_is_public_or_checks_staff_first():
+def test_every_server_method_is_public_or_checks_admin_first():
     for reg in _of_kind("server_method"):
         if reg.name in PUBLIC_SERVER_METHODS:
             continue
         func = getattr(reg.obj, "__func__", reg.obj)
-        assert _first_statement_calls_require_staff(func), (
+        assert _first_statement_calls_require_admin(func), (
             f"server method {reg.name} is not public and its first statement "
-            "is not a require_staff call: call require_staff first, or add it "
+            "is not a require_admin call: call require_admin first, or add it "
             "to PUBLIC_SERVER_METHODS and justify it"
         )
 
@@ -178,7 +178,7 @@ def test_allow_list_entries_name_real_registrations(allow_list, kinds):
     assert not stale, f"allow-list entries with no registration: {stale}"
 
 
-def test_no_account_creation_outside_the_first_staff_script():
+def test_no_account_creation_outside_the_first_admin_script():
     for path in _source_files():
         relative = path.relative_to(ROOT).as_posix()
         if relative in SIGNUP_ALLOWED:
@@ -190,15 +190,15 @@ def test_no_account_creation_outside_the_first_staff_script():
         )
 
 
-def test_the_first_staff_script_is_the_only_script():
-    # The script's own behaviour is pinned in test_create_staff.py.
+def test_the_first_admin_script_is_the_only_script():
+    # The script's own behaviour is pinned in test_create_admin.py.
     scripts = sorted(
         p.relative_to(ROOT).as_posix()
         for p in (ROOT / "scripts").rglob("*")
         if p.is_file() and "__pycache__" not in p.parts
     )
 
-    assert set(scripts) <= {"scripts/CreateStaff.py"}, (
+    assert set(scripts) <= {"scripts/CreateAdmin.py"}, (
         "a new script is a deliberate, reviewed addition: update this test "
         "and SIGNUP_ALLOWED together"
     )

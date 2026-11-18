@@ -20,8 +20,8 @@ MAX_SLUG_LENGTH = 64
 # and the router's own routes keep priority over /:slug.
 RESERVED_SLUGS = frozenset(
     [
-        "staff",
         "admin",
+        "staff",
         "login",
         "logout",
         "signup",
@@ -65,10 +65,10 @@ def looks_like_slug(slug):
 
 
 def clean_room_slug(text):
-    """Turn a staff-typed room name into a readable slug, or raise ValueError.
+    """Turn an admin-typed room name into a readable slug, or raise ValueError.
 
     The text is trimmed and lower-cased, and each run of spaces or underscores
-    becomes one "-". The messages are written for the staff member who typed the
+    becomes one "-". The messages are written for the admin who typed the
     name. Uniqueness is not checked here: it needs the table, so the room model
     does it.
     """

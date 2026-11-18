@@ -7,8 +7,8 @@
 
 Connect to the running app server, call the ping callable, expect "pong", then
 seed the rows the local stack needs. The app has tables now, so rows go in from
-this script on the privileged uplink. Today that is the two dev accounts (a staff
-user and a non-staff viewer, made by the same code as `just create-staff --dev`),
+this script on the privileged uplink. Today that is the two dev accounts (an admin
+user and a non-admin viewer, made by the same code as `just create-admin --dev`),
 one known join room with its two VDO.Ninja settings, so the join e2e tests have a
 meeting to open, and one known permanent room with a made-up passphrase, so the
 permanent-room e2e tests have something to unlock. Later phases add their seed
@@ -27,7 +27,7 @@ from pathlib import Path
 
 import anvil.server
 import anvil.users
-import create_staff  # a sibling in tools/, first on sys.path when run by path
+import create_admin  # a sibling in tools/, first on sys.path when run by path
 import stack_url
 from anvil.tables import app_tables
 
@@ -97,21 +97,21 @@ def _connect() -> bool:
 
 
 def _seed_accounts() -> None:
-    """Ensure the dev staff and viewer accounts. Safe to run again."""
-    staff = create_staff.ensure_staff(
-        create_staff.DEV_STAFF_EMAIL,
-        create_staff.DEV_STAFF_PASSWORD,
+    """Ensure the dev admin and viewer accounts. Safe to run again."""
+    admin = create_admin.ensure_admin(
+        create_admin.DEV_ADMIN_EMAIL,
+        create_admin.DEV_ADMIN_PASSWORD,
         anvil.server,
         app_tables,
     )
-    print(f"seed: staff account ready ({create_staff.DEV_STAFF_EMAIL}, {staff})")
-    viewer = create_staff.ensure_viewer(
-        create_staff.DEV_VIEWER_EMAIL,
-        create_staff.DEV_VIEWER_PASSWORD,
+    print(f"seed: admin account ready ({create_admin.DEV_ADMIN_EMAIL}, {admin})")
+    viewer = create_admin.ensure_viewer(
+        create_admin.DEV_VIEWER_EMAIL,
+        create_admin.DEV_VIEWER_PASSWORD,
         anvil.users,
         app_tables,
     )
-    print(f"seed: viewer account ready ({create_staff.DEV_VIEWER_EMAIL}, {viewer})")
+    print(f"seed: viewer account ready ({create_admin.DEV_VIEWER_EMAIL}, {viewer})")
 
 
 def _put_setting(app_tables, key: str, value: str) -> None:
@@ -137,7 +137,7 @@ def seed_join_room(app_tables) -> str:
             title=DEV_ROOM_TITLE,
             kind="one-off",
             active=True,
-            created_by=create_staff.DEV_STAFF_EMAIL,
+            created_by=create_admin.DEV_ADMIN_EMAIL,
             created=datetime.datetime.now(),
         )
         result = "created"
@@ -191,7 +191,7 @@ def seed_permanent_room(app_tables) -> str:
     if row is None:
         app_tables.room.add_row(
             slug=SEEDED_PERMANENT_SLUG,
-            created_by=create_staff.DEV_STAFF_EMAIL,
+            created_by=create_admin.DEV_ADMIN_EMAIL,
             created=datetime.datetime.now(),
             **values,
         )

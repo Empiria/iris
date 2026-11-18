@@ -28,7 +28,7 @@ def _room(tables, slug=SLUG, active=True, title="Kickoff"):
         title=title,
         kind="one-off",
         active=active,
-        created_by="staff@example.test",
+        created_by="admin@example.test",
     )
 
 
@@ -69,12 +69,12 @@ def test_reply_holds_exactly_what_a_join_needs(meetings, tables):
         assert key not in found
 
 
-@pytest.mark.parametrize("who", ["anonymous", "non-staff", "staff"])
+@pytest.mark.parametrize("who", ["anonymous", "non-admin", "admin"])
 def test_the_same_reply_for_every_caller(meetings, tables, as_user, make_user, who):
     _room(tables)
-    if who == "non-staff":
-        as_user(make_user(email="viewer@example.test", is_staff=False))
-    elif who == "staff":
+    if who == "non-admin":
+        as_user(make_user(email="viewer@example.test", is_admin=False))
+    elif who == "admin":
         as_user(make_user())
     else:
         as_user(None)
@@ -107,7 +107,7 @@ def test_an_inactive_room_returns_none(meetings, tables):
 
 @pytest.mark.parametrize(
     "bad",
-    ["ab", "../x", "Has Space", "staff", "a" * 65, "", None, 5],
+    ["ab", "../x", "Has Space", "admin", "a" * 65, "", None, 5],
     ids=["short", "path", "space", "reserved", "long", "empty", "none", "int"],
 )
 def test_a_bad_input_returns_none_and_reads_nothing(meetings, tables, bad):
@@ -201,7 +201,7 @@ def test_a_permanent_slug_is_locked_for_every_caller(
 ):
     _permanent_row(tables)
     if who == "non-admin":
-        as_user(make_user(email="viewer@example.test", is_staff=False))
+        as_user(make_user(email="viewer@example.test", is_admin=False))
     elif who == "admin":
         as_user(make_user())
     else:

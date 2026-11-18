@@ -15,7 +15,7 @@ RESULTS = (
     ROOT
     / ".planning"
     / "phases"
-    / "02-one-off-meetings-staff-to-client"
+    / "02-one-off-meetings-admin-to-client"
     / "02-SPIKE-RESULTS.md"
 )
 HANDOFF_SOURCE = ROOT / "client_code" / "services" / "handoff.py"

@@ -1,4 +1,4 @@
-"""Manage rooms from the admin page: list, edit title, rotate, delete (STAFF-04).
+"""Manage rooms from the admin page: list, edit title, rotate, delete (ADMIN-04).
 
 Runs against the live local stack. Each test makes its own rooms through the
 page, and a fixture deletes every room it made over the privileged uplink
@@ -101,8 +101,8 @@ def _handed_off_password(page: Page):
     return dict(_pairs("#" + source.split("#", 1)[1]))["password"]
 
 
-def test_list_shows_created_rooms(staff_page: Page, room_name, made_slugs):
-    page = staff_page
+def test_list_shows_created_rooms(admin_page: Page, room_name, made_slugs):
+    page = admin_page
 
     _create_permanent(page, room_name, "List check permanent")
     one_off = _create_one_off(page, "List check one-off", made_slugs)
@@ -127,9 +127,9 @@ def test_list_shows_created_rooms(staff_page: Page, room_name, made_slugs):
 
 
 def test_edit_title(
-    staff_page: Page, browser: Browser, base_url: str, room_name, made_slugs
+    admin_page: Page, browser: Browser, base_url: str, room_name, made_slugs
 ):
-    page = staff_page
+    page = admin_page
     passphrase = _create_permanent(page, room_name, "Before the edit")
     row = _row(page, room_name)
     expect(row).to_contain_text("Before the edit", timeout=VISIBLE_MS)
@@ -162,9 +162,9 @@ def test_edit_title(
 
 
 def test_rotate_passphrase_old_fails_new_works(
-    staff_page: Page, browser: Browser, base_url: str, room_name
+    admin_page: Page, browser: Browser, base_url: str, room_name
 ):
-    page = staff_page
+    page = admin_page
     old = _create_permanent(page, room_name, "Rotate check")
 
     before = browser.new_context(base_url=base_url)
@@ -208,9 +208,9 @@ def test_rotate_passphrase_old_fails_new_works(
 
 
 def test_delete_room_then_no_such_meeting(
-    staff_page: Page, browser: Browser, base_url: str, room_name
+    admin_page: Page, browser: Browser, base_url: str, room_name
 ):
-    page = staff_page
+    page = admin_page
     _create_permanent(page, room_name, "Delete check")
     row = _row(page, room_name)
     expect(row).to_be_visible(timeout=VISIBLE_MS)
@@ -232,9 +232,9 @@ def test_delete_room_then_no_such_meeting(
 
 
 def test_delete_one_off_link(
-    staff_page: Page, browser: Browser, base_url: str, made_slugs
+    admin_page: Page, browser: Browser, base_url: str, made_slugs
 ):
-    page = staff_page
+    page = admin_page
     slug = _create_one_off(page, "One-off delete check", made_slugs)
     row = _row(page, slug)
     expect(row).to_be_visible(timeout=VISIBLE_MS)

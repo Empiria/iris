@@ -1,4 +1,4 @@
-"""Edit the vdo.ninja profile on the staff page (STAFF-05).
+"""Edit the vdo.ninja profile on the admin page (ADMIN-05).
 
 Runs against the live local stack after `just seed`. The tests change the
 `vdo_profile` setting, so a fixture puts back whatever it held, over the
@@ -55,13 +55,13 @@ def _save_profile(page: Page, text: str):
     page.get_by_role("button", name="Save settings").click()
 
 
-def test_staff_edits_profile_and_next_join_uses_it(
-    staff_page: Page, page: Page, restore_profile
+def test_admin_edits_profile_and_next_join_uses_it(
+    admin_page: Page, page: Page, restore_profile
 ):
-    _save_profile(staff_page, "&iristestparam=1")
-    expect(staff_page.get_by_text(SAVED)).to_be_visible(timeout=VISIBLE_MS)
+    _save_profile(admin_page, "&iristestparam=1")
+    expect(admin_page.get_by_text(SAVED)).to_be_visible(timeout=VISIBLE_MS)
 
-    # A fresh context, so nothing from the staff session carries over.
+    # A fresh context, so nothing from the admin session carries over.
     _stub_vdo(page)
     join_path(page, SEEDED_SLUG)
     expect(page.get_by_role("heading", name=SEEDED_TITLE)).to_be_visible(
@@ -71,27 +71,27 @@ def test_staff_edits_profile_and_next_join_uses_it(
 
     keys = [key for key, _ in _pairs(handed_off_url(page))]
     assert "iristestparam" in keys
-    assert not staff_page.get_by_text(ERROR_BANNER).is_visible()
+    assert not admin_page.get_by_text(ERROR_BANNER).is_visible()
 
 
-def test_rejected_profile_shows_message(staff_page: Page, restore_profile):
-    _save_profile(staff_page, "iristestparam=2")
-    expect(staff_page.get_by_text(SAVED)).to_be_visible(timeout=VISIBLE_MS)
+def test_rejected_profile_shows_message(admin_page: Page, restore_profile):
+    _save_profile(admin_page, "iristestparam=2")
+    expect(admin_page.get_by_text(SAVED)).to_be_visible(timeout=VISIBLE_MS)
 
-    _save_profile(staff_page, "&meshcast")
-    expect(staff_page.get_by_text(MESHCAST_MESSAGE)).to_be_visible(timeout=VISIBLE_MS)
+    _save_profile(admin_page, "&meshcast")
+    expect(admin_page.get_by_text(MESHCAST_MESSAGE)).to_be_visible(timeout=VISIBLE_MS)
 
-    staff_page.reload(wait_until="domcontentloaded")
-    expect(staff_page.get_by_label("vdo.ninja parameters")).to_have_value(
+    admin_page.reload(wait_until="domcontentloaded")
+    expect(admin_page.get_by_label("vdo.ninja parameters")).to_have_value(
         "iristestparam=2", timeout=FIRST_LOAD_MS
     )
-    assert not staff_page.get_by_text(ERROR_BANNER).is_visible()
+    assert not admin_page.get_by_text(ERROR_BANNER).is_visible()
 
 
 def test_profile_card_hidden_when_signed_out(page: Page):
-    page.goto("staff", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
+    page.goto("admin", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
 
-    expect(page.get_by_role("heading", name="Staff sign-in")).to_be_visible(
+    expect(page.get_by_role("heading", name="Admin sign-in")).to_be_visible(
         timeout=FIRST_LOAD_MS
     )
     # The card is in the page but hidden, and label queries find hidden inputs.

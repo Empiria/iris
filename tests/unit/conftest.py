@@ -187,9 +187,9 @@ def as_user():
 
 @pytest.fixture
 def make_user():
-    """Build a `FakeUser`. Defaults to a staff member."""
+    """Build a `FakeUser`. Defaults to an admin."""
 
-    def make(email="staff@example.test", is_staff=True):
-        return FakeUser(email=email, is_staff=is_staff)
+    def make(email="admin@example.test", is_admin=True):
+        return FakeUser(email=email, is_admin=is_admin)
 
     return make

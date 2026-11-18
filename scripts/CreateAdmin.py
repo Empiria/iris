@@ -1,20 +1,22 @@
-"""Create the first staff user (DEPL-03).
+"""Create the first admin user (DEPL-03).
 
 Sign-up is off and a browser cannot launch a script, so this is the only way
-the first staff account comes to exist. It refuses to run once any staff user
+the first admin account comes to exist. It refuses to run once any admin user
 exists, so it cannot be used to add a second one or to take over an account.
 
 Arguments: [EMAIL [PASSWORD]]. Each value comes from, in order, the launch
-argument, the environment variable (IRIS_STAFF_EMAIL, IRIS_STAFF_PASSWORD), the
-app secret (iris_staff_email, iris_staff_password). With no password anywhere a
+argument, the environment variable (IRIS_ADMIN_EMAIL, IRIS_ADMIN_PASSWORD), the
+app secret (iris_admin_email, iris_admin_password). With no password anywhere a
 random one is generated and printed once, on a line `generated password: ...`.
-The password is never printed from any other source.
+The password is never printed from any other source. The older names
+IRIS_STAFF_EMAIL, IRIS_STAFF_PASSWORD, iris_staff_email and iris_staff_password
+are still read as a fallback.
 
-Hosted: set the `iris_staff_email` app secret and, if you want to choose it, the
-`iris_staff_password` secret. Press Run on `CreateStaff` in the Anvil editor,
+Hosted: set the `iris_admin_email` app secret and, if you want to choose it, the
+`iris_admin_password` secret. Press Run on `CreateAdmin` in the Anvil editor,
 read the output, then remove the password secret.
 
-Local: `just create-staff --dev`, or `just create-staff you@example.com`. The
+Local: `just create-admin --dev`, or `just create-admin you@example.com`. The
 launcher passes the values as launch arguments. A generated password is in
 `just logs`.
 """
@@ -57,14 +59,23 @@ def _secret(name):
 
 
 def _value(args, index, env_name, secret_name):
-    """The launch argument, else the environment, else the secret."""
+    """The launch argument, else the environment, else the secret.
+
+    The names this script used before the staff-to-admin rename
+    (IRIS_STAFF_*, iris_staff_*) are still read, after the new ones, so a
+    deployment that set them keeps working.
+    """
     if len(args) > index:
         return args[index], "argument"
-    if os.environ.get(env_name):
-        return os.environ[env_name], "environment"
-    found = _secret(secret_name)
-    if found:
-        return found, "secret"
+    old_env = env_name.replace("ADMIN", "STAFF")
+    old_secret = secret_name.replace("admin", "staff")
+    for name in (env_name, old_env):
+        if os.environ.get(name):
+            return os.environ[name], "environment"
+    for name in (secret_name, old_secret):
+        found = _secret(name)
+        if found:
+            return found, "secret"
     return None, "none"
 
 
@@ -77,14 +88,14 @@ def _clean_email(email):
 
 
 def _refuse_existing(email):
-    if next(iter(app_tables.users.search(is_staff=True)), None) is not None:
-        raise RuntimeError("a staff user already exists; refusing to create another")
+    if next(iter(app_tables.users.search(is_admin=True)), None) is not None:
+        raise RuntimeError("an admin user already exists; refusing to create another")
     if app_tables.users.get(email=email) is not None:
         raise RuntimeError("an account for this email already exists; not changing it")
 
 
 def _password(args):
-    password, source = _value(args, 1, "IRIS_STAFF_PASSWORD", "iris_staff_password")
+    password, source = _value(args, 1, "IRIS_ADMIN_PASSWORD", "iris_admin_password")
     if password is None:
         return secrets.token_urlsafe(18), "generated"
     if len(password) < MIN_PASSWORD_LENGTH:
@@ -97,11 +108,11 @@ def _password(args):
 
 def main():
     args = _args()
-    email, _source = _value(args, 0, "IRIS_STAFF_EMAIL", "iris_staff_email")
+    email, _source = _value(args, 0, "IRIS_ADMIN_EMAIL", "iris_admin_email")
     if email is None:
         raise SystemExit(
             "no email: pass one as the first argument, or set the "
-            "IRIS_STAFF_EMAIL environment variable or the iris_staff_email secret"
+            "IRIS_ADMIN_EMAIL environment variable or the iris_admin_email secret"
         )
     email = _clean_email(email)
     _refuse_existing(email)
@@ -109,8 +120,8 @@ def main():
     user = anvil.users.signup_with_email(email, password)
     if user is None:
         raise RuntimeError("the account was not created")
-    user["is_staff"] = True
-    print("created staff user", user["email"], "password from", source)
+    user["is_admin"] = True
+    print("created admin user", user["email"], "password from", source)
     if source == "generated":
         print("generated password:", password)
 

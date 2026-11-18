@@ -34,18 +34,18 @@ def lookup_room(slug):
     return Room.lookup(slug)
 
 
-@anvil.server.callable(require_user=permissions.is_staff)
+@anvil.server.callable(require_user=permissions.is_admin)
 def create_one_off_link(title=""):
     """Create a one-off meeting room and return its slug and title.
 
-    Staff only. The runtime enforces `require_user`, and `Room.create_one_off`
+    Admin only. The runtime enforces `require_user`, and `Room.create_one_off`
     repeats the check, because a model method is callable on its own. The reply
     carries the slug and title only: the separate vdo_room never leaves the server.
     """
     return Room.create_one_off(title=clean_title(title))
 
 
-@anvil.server.callable(require_user=permissions.is_staff)
+@anvil.server.callable(require_user=permissions.is_admin)
 def create_permanent_room(slug, title=""):
     """Create a permanent room with a readable slug and return its passphrase.
 
@@ -74,17 +74,17 @@ def unlock_room(slug, passphrase):
     return Room.unlock(slug, passphrase)
 
 
-@anvil.server.callable(require_user=permissions.is_staff)
+@anvil.server.callable(require_user=permissions.is_admin)
 def list_rooms():
     """Every room, newest first, as plain summaries. Admins only.
 
     Each summary is {slug, title, kind, created}. No room secret is in it.
-    `Room.list_for_staff` repeats the admin check.
+    `Room.list_for_admin` repeats the admin check.
     """
-    return Room.list_for_staff()
+    return Room.list_for_admin()
 
 
-@anvil.server.callable(require_user=permissions.is_staff)
+@anvil.server.callable(require_user=permissions.is_admin)
 def update_room(slug, title):
     """Change a room's title and return its summary. Admins only (D-7).
 
@@ -96,7 +96,7 @@ def update_room(slug, title):
     return Room.update_title(slug, clean_title(title))
 
 
-@anvil.server.callable(require_user=permissions.is_staff)
+@anvil.server.callable(require_user=permissions.is_admin)
 def delete_room(slug):
     """Delete a room for good, after the admin confirmed it. Admins only (D-8).
 
@@ -108,7 +108,7 @@ def delete_room(slug):
     return Room.remove(slug)
 
 
-@anvil.server.callable(require_user=permissions.is_staff)
+@anvil.server.callable(require_user=permissions.is_admin)
 def rotate_passphrase(slug):
     """Give a permanent room a new passphrase and return it. Admins only (D-8).
 

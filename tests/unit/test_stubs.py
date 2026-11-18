@@ -128,17 +128,17 @@ def test_tables_fixture_clears_rows_and_reads(tables):
 
 def test_signed_out_by_default_and_as_user_sets_the_user(as_user, make_user):
     assert users.get_user() is None
-    staff = make_user()
-    as_user(staff)
-    assert users.get_user() is staff
-    assert staff["email"] == "staff@example.test"
-    assert staff["is_staff"] is True
+    admin = make_user()
+    as_user(admin)
+    assert users.get_user() is admin
+    assert admin["email"] == "admin@example.test"
+    assert admin["is_admin"] is True
     as_user(None)
     assert users.get_user() is None
 
 
-def test_make_user_can_be_non_staff(make_user):
-    assert make_user(email="x@y.test", is_staff=False)["is_staff"] is False
+def test_make_user_can_be_non_admin(make_user):
+    assert make_user(email="x@y.test", is_admin=False)["is_admin"] is False
 
 
 def test_iris_package_resolves_both_trees():

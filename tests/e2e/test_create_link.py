@@ -1,4 +1,4 @@
-"""Create a one-off link on /staff and copy it (STAFF-02).
+"""Create a one-off link on /admin and copy it (ADMIN-02).
 
 Runs against the live local stack. Never waits for network idle. No assertion
 message contains a password.
@@ -23,8 +23,8 @@ def _create(page: Page, title: str = ""):
     page.get_by_role("button", name="Create link").click()
 
 
-def test_staff_creates_and_copies_link(staff_page: Page):
-    page = staff_page
+def test_admin_creates_and_copies_link(admin_page: Page):
+    page = admin_page
     origin = page.evaluate("location.origin")
 
     _create(page, "Kickoff")
@@ -37,8 +37,8 @@ def test_staff_creates_and_copies_link(staff_page: Page):
     assert not page.get_by_text(ERROR_BANNER).is_visible()
 
 
-def test_two_links_differ(staff_page: Page):
-    page = staff_page
+def test_two_links_differ(admin_page: Page):
+    page = admin_page
     link = page.get_by_label("Meeting link")
 
     _create(page)
@@ -52,9 +52,9 @@ def test_two_links_differ(staff_page: Page):
 
 
 def test_create_card_hidden_when_signed_out(page: Page):
-    page.goto("staff", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
+    page.goto("admin", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
 
-    expect(page.get_by_role("heading", name="Staff sign-in")).to_be_visible(
+    expect(page.get_by_role("heading", name="Admin sign-in")).to_be_visible(
         timeout=FIRST_LOAD_MS
     )
     # The card is in the page but hidden, and role queries skip hidden elements.

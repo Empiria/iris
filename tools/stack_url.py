@@ -5,7 +5,7 @@
 the container (`-p 127.0.0.1:<port>:3030`, with `--origin http://localhost:<port>`
 so the page's asset and websocket URLs match) and writes the resolved URL to the
 git-ignored `.anvil/stack-url`. Everything
-else (`just seed`, `just e2e`, `just create-staff`, a bare `pytest tests/e2e`,
+else (`just seed`, `just e2e`, `just create-admin`, a bare `pytest tests/e2e`,
 `tools/dev_seed.py`) reads it back here. Precedence, first match wins:
 
 1. `IRIS_URL`, to point at another stack.

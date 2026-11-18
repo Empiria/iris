@@ -25,7 +25,7 @@ def test_looks_like_slug_refuses(slugs, slug):
 
 
 def test_reserved_slugs_are_refused(slugs):
-    assert "staff" in slugs.RESERVED_SLUGS
+    assert "admin" in slugs.RESERVED_SLUGS
     for slug in slugs.RESERVED_SLUGS:
         assert not slugs.looks_like_slug(slug), slug
 
@@ -97,7 +97,7 @@ def test_clean_room_slug_makes_a_readable_slug(slugs, typed, expected):
         ("-acme", "start or end with a dash"),
         ("acme-", "start or end with a dash"),
         ("acme_", "start or end with a dash"),
-        ("staff", "That name is reserved."),
+        ("admin", "That name is reserved."),
         ("Admin", "That name is reserved."),
     ],
 )

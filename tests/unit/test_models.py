@@ -17,8 +17,8 @@ def slugs(load_client_module):
 
 
 @pytest.fixture
-def staff(as_user, make_user):
-    user = make_user(email="staff@example.test", is_staff=True)
+def admin(as_user, make_user):
+    user = make_user(email="admin@example.test", is_admin=True)
     as_user(user)
     return user
 
@@ -30,7 +30,7 @@ def _add_room(tables, slug, vdo_room="r" * 20, active=True, title="T"):
         title=title,
         kind="one-off",
         active=active,
-        created_by="staff@example.test",
+        created_by="admin@example.test",
         created=datetime.datetime(2026, 1, 1),
     )
 
@@ -42,7 +42,7 @@ def test_lookup_empty_table_returns_none(Room, tables):
     assert Room.lookup("dk2wjd9d") is None
 
 
-def test_lookup_returns_exactly_what_a_join_needs(Room, tables, staff):
+def test_lookup_returns_exactly_what_a_join_needs(Room, tables, admin):
     made = Room.create_one_off(title="Kickoff")
     row = tables.room.rows[0]
 
@@ -83,7 +83,7 @@ def test_lookup_of_an_inactive_row_returns_none(Room, tables):
     assert Room.lookup("dk2wjd9d") is None
 
 
-@pytest.mark.parametrize("slug", ["", "../x", "staff", None, "a b"])
+@pytest.mark.parametrize("slug", ["", "../x", "admin", None, "a b"])
 def test_lookup_of_a_malformed_or_reserved_slug_reads_no_table(Room, tables, slug):
     assert Room.lookup(slug) is None
     assert tables.room.reads == 0
@@ -99,7 +99,7 @@ def test_lookup_normalises_case_and_whitespace(Room, tables):
 
 
 def test_create_one_off_stores_the_row_and_returns_slug_and_title(
-    Room, tables, staff, slugs
+    Room, tables, admin, slugs
 ):
     result = Room.create_one_off(title="Kickoff")
 
@@ -115,11 +115,11 @@ def test_create_one_off_stores_the_row_and_returns_slug_and_title(
     assert row["title"] == "Kickoff"
     assert row["kind"] == "one-off"
     assert row["active"] is True
-    assert row["created_by"] == "staff@example.test"
+    assert row["created_by"] == "admin@example.test"
     assert isinstance(row["created"], datetime.datetime)
 
 
-def test_create_one_off_title_defaults_to_empty(Room, tables, staff):
+def test_create_one_off_title_defaults_to_empty(Room, tables, admin):
     assert Room.create_one_off()["title"] == ""
 
 
@@ -133,8 +133,8 @@ def test_create_one_off_refuses_signed_out(Room, tables, as_user):
     assert tables.room.reads == 0
 
 
-def test_create_one_off_refuses_non_staff(Room, tables, as_user, make_user):
-    as_user(make_user(is_staff=False))
+def test_create_one_off_refuses_non_admin(Room, tables, as_user, make_user):
+    as_user(make_user(is_admin=False))
 
     with pytest.raises(anvil.server.PermissionDenied):
         Room.create_one_off(title="x")
@@ -148,7 +148,7 @@ def _draws(monkeypatch, slugs, values):
     monkeypatch.setattr(slugs, "new_one_off_slug", lambda: queue.pop(0))
 
 
-def test_create_one_off_redraws_a_taken_slug(Room, tables, staff, slugs, monkeypatch):
+def test_create_one_off_redraws_a_taken_slug(Room, tables, admin, slugs, monkeypatch):
     _add_room(tables, "taken234")
     _draws(monkeypatch, slugs, ["taken234", "fresh345"])
 
@@ -157,15 +157,15 @@ def test_create_one_off_redraws_a_taken_slug(Room, tables, staff, slugs, monkeyp
 
 
 def test_create_one_off_redraws_a_reserved_slug(
-    Room, tables, staff, slugs, monkeypatch
+    Room, tables, admin, slugs, monkeypatch
 ):
-    _draws(monkeypatch, slugs, ["staff", "fresh345"])
+    _draws(monkeypatch, slugs, ["admin", "fresh345"])
 
     assert Room.create_one_off(title="x")["slug"] == "fresh345"
 
 
 def test_create_one_off_gives_up_after_ten_taken_slugs(
-    Room, tables, staff, slugs, monkeypatch
+    Room, tables, admin, slugs, monkeypatch
 ):
     _add_room(tables, "taken234")
     monkeypatch.setattr(slugs, "new_one_off_slug", lambda: "taken234")
@@ -185,13 +185,6 @@ def test_room_methods_are_registered_server_methods(Room):
     }
 
     assert {"Room.lookup", "Room.create_one_off"} <= registered
-
-
-@pytest.fixture
-def admin(as_user, make_user):
-    user = make_user(email="admin@example.test", is_staff=True)
-    as_user(user)
-    return user
 
 
 # --- permanent rooms (JOIN-02, JOIN-03, D-9) ------------------------------
@@ -352,7 +345,7 @@ def test_create_permanent_refuses_signed_out(Room, tables, as_user, fast_kdf):
 
 
 def test_create_permanent_refuses_non_admin(Room, tables, as_user, make_user, fast_kdf):
-    as_user(make_user(email="viewer@example.test", is_staff=False))
+    as_user(make_user(email="viewer@example.test", is_admin=False))
 
     with pytest.raises(anvil.server.PermissionDenied):
         Room.create_permanent("Acme Board", title="x")
@@ -641,16 +634,16 @@ def test_permanent_methods_are_registered(Room):
     assert {"Room.create_permanent", "Room.unlock"} <= registered
 
 
-# --- room management (STAFF-04, D-7, D-8) ---------------------------------
+# --- room management (ADMIN-04, D-7, D-8) ---------------------------------
 
 SUMMARY_KEYS = {"slug", "title", "kind", "created"}
-MANAGEMENT = ("list_for_staff", "update_title", "remove", "rotate")
+MANAGEMENT = ("list_for_admin", "update_title", "remove", "rotate")
 
 
 def _call_management(Room, name):
-    """Call each management method with arguments that would succeed for staff."""
+    """Call each management method with arguments that would succeed for admin."""
     args = {
-        "list_for_staff": (),
+        "list_for_admin": (),
         "update_title": ("acme-board", "New title"),
         "remove": ("acme-board",),
         "rotate": ("acme-board",),
@@ -658,17 +651,17 @@ def _call_management(Room, name):
     return getattr(Room, name)(*args)
 
 
-def test_list_for_staff_of_an_empty_table_is_an_empty_list(Room, tables, admin):
-    assert Room.list_for_staff() == []
+def test_list_for_admin_of_an_empty_table_is_an_empty_list(Room, tables, admin):
+    assert Room.list_for_admin() == []
 
 
-def test_list_for_staff_returns_exactly_slug_title_kind_and_created(
+def test_list_for_admin_returns_exactly_slug_title_kind_and_created(
     Room, tables, admin, fast_kdf
 ):
     _permanent(Room)
     Room.create_one_off(title="Kickoff")
 
-    rooms = Room.list_for_staff()
+    rooms = Room.list_for_admin()
 
     assert len(rooms) == 2
     for room in rooms:
@@ -679,11 +672,11 @@ def test_list_for_staff_returns_exactly_slug_title_kind_and_created(
     assert by_slug["acme-board"]["title"] == "Acme quarterly"
 
 
-def test_list_for_staff_carries_no_secret_of_any_room(Room, tables, admin, fast_kdf):
+def test_list_for_admin_carries_no_secret_of_any_room(Room, tables, admin, fast_kdf):
     _permanent(Room)
     Room.create_one_off(title="Kickoff")
 
-    text = repr(Room.list_for_staff())
+    text = repr(Room.list_for_admin())
 
     for row in tables.room.rows:
         for column in ("vdo_room", "vdo_password", "verifier", "verifier_salt"):
@@ -693,7 +686,7 @@ def test_list_for_staff_carries_no_secret_of_any_room(Room, tables, admin, fast_
         assert word not in text
 
 
-def test_list_for_staff_is_newest_first(Room, tables, admin):
+def test_list_for_admin_is_newest_first(Room, tables, admin):
     for slug, day in (("older-room", 3), ("newest-room", 20), ("middle-room", 9)):
         tables.room.add_row(
             slug=slug,
@@ -705,14 +698,14 @@ def test_list_for_staff_is_newest_first(Room, tables, admin):
             created=datetime.datetime(2026, 11, day),
         )
 
-    assert [r["slug"] for r in Room.list_for_staff()] == [
+    assert [r["slug"] for r in Room.list_for_admin()] == [
         "newest-room",
         "middle-room",
         "older-room",
     ]
 
 
-def test_list_for_staff_puts_a_row_with_no_date_last_and_copes(Room, tables, admin):
+def test_list_for_admin_puts_a_row_with_no_date_last_and_copes(Room, tables, admin):
     for slug, created in (
         ("undated-room", None),
         ("dated-room", datetime.datetime(2026, 11, 1)),
@@ -727,10 +720,10 @@ def test_list_for_staff_puts_a_row_with_no_date_last_and_copes(Room, tables, adm
             created=created,
         )
 
-    assert [r["slug"] for r in Room.list_for_staff()] == ["dated-room", "undated-room"]
+    assert [r["slug"] for r in Room.list_for_admin()] == ["dated-room", "undated-room"]
 
 
-def test_list_for_staff_copes_with_a_timezone_aware_and_a_naive_date(
+def test_list_for_admin_copes_with_a_timezone_aware_and_a_naive_date(
     Room, tables, admin
 ):
     aware = datetime.datetime(
@@ -750,7 +743,7 @@ def test_list_for_staff_copes_with_a_timezone_aware_and_a_naive_date(
             created=created,
         )
 
-    assert [r["slug"] for r in Room.list_for_staff()] == ["naive-room", "aware-room"]
+    assert [r["slug"] for r in Room.list_for_admin()] == ["naive-room", "aware-room"]
 
 
 def test_update_title_sets_the_title_and_the_updated_time_and_saves(
@@ -1003,7 +996,7 @@ def test_management_methods_refuse_non_admin_and_touch_nothing(
     _permanent(Room)
     before = [dict(r._values) for r in tables.room.rows]
     reads = tables.room.reads
-    as_user(make_user(email="viewer@example.test", is_staff=False))
+    as_user(make_user(email="viewer@example.test", is_admin=False))
 
     with pytest.raises(anvil.server.PermissionDenied):
         _call_management(Room, name)

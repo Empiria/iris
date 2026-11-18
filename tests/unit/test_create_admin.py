@@ -1,4 +1,4 @@
-"""The first-staff script (scripts/CreateStaff.py) and its local launcher.
+"""The first-admin script (scripts/CreateAdmin.py) and its local launcher.
 
 The script runs `main()` at module level, so each test executes it with
 `exec`, `sys.argv` set to the launch arguments and fake `anvil.users`,
@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "scripts" / "CreateStaff.py"
+SCRIPT = ROOT / "scripts" / "CreateAdmin.py"
 
 # Distinctive values, so a leak into any output line is easy to see.
 PASSWORD = "Zq7-distinct-pw-4471"
@@ -40,7 +40,7 @@ class SecretsFake:
 @pytest.fixture
 def run_script(monkeypatch, tables):
     """Run the script. Returns the fake Users service so a test can inspect it."""
-    for name in ("IRIS_STAFF_EMAIL", "IRIS_STAFF_PASSWORD"):
+    for name in ("IRIS_ADMIN_EMAIL", "IRIS_ADMIN_PASSWORD"):
         monkeypatch.delenv(name, raising=False)
 
     def run(args=(), env=None, secrets=None, secret_error=None, script_args=None):
@@ -50,7 +50,7 @@ def run_script(monkeypatch, tables):
 
         def signup_with_email(email, password):
             calls.append((email, password))
-            return tables.users.add_row(email=email, is_staff=None)
+            return tables.users.add_row(email=email, is_admin=None)
 
         users = types.ModuleType("anvil.users")
         users.signup_with_email = signup_with_email
@@ -72,7 +72,7 @@ def run_script(monkeypatch, tables):
         # Not runpy.run_path: it overwrites sys.argv[0] with the script path,
         # and the runtime's argv is the launch arguments and nothing else.
         code = compile(SCRIPT.read_text(encoding="utf-8"), str(SCRIPT), "exec")
-        exec(code, {"__name__": "create_staff_script"})  # noqa: S102
+        exec(code, {"__name__": "create_admin_script"})  # noqa: S102
         return calls
 
     return run
@@ -85,14 +85,14 @@ def _lines(capsys):
 # --- script: where the values come from ------------------------------------
 
 
-def test_arguments_create_a_staff_user(run_script, tables, capsys):
+def test_arguments_create_a_admin_user(run_script, tables, capsys):
     calls = run_script(["Boss@Example.test", PASSWORD])
 
     assert calls == [("boss@example.test", PASSWORD)]
     row = tables.users.get(email="boss@example.test")
-    assert row["is_staff"] is True
+    assert row["is_admin"] is True
     out = capsys.readouterr().out
-    assert "created staff user boss@example.test password from argument" in out
+    assert "created admin user boss@example.test password from argument" in out
     assert PASSWORD not in out
 
 
@@ -100,8 +100,8 @@ def test_environment_is_used_without_arguments(run_script, capsys):
     calls = run_script(
         [],
         env={
-            "IRIS_STAFF_EMAIL": "env@example.test",
-            "IRIS_STAFF_PASSWORD": ENV_PASSWORD,
+            "IRIS_ADMIN_EMAIL": "env@example.test",
+            "IRIS_ADMIN_PASSWORD": ENV_PASSWORD,
         },
     )
 
@@ -115,8 +115,8 @@ def test_secrets_are_used_last(run_script, capsys):
     calls = run_script(
         [],
         secrets={
-            "iris_staff_email": "secret@example.test",
-            "iris_staff_password": SECRET_PASSWORD,
+            "iris_admin_email": "secret@example.test",
+            "iris_admin_password": SECRET_PASSWORD,
         },
     )
 
@@ -128,10 +128,10 @@ def test_secrets_are_used_last(run_script, capsys):
 
 def test_environment_beats_secret(run_script):
     secrets = {
-        "iris_staff_email": "secret@example.test",
-        "iris_staff_password": SECRET_PASSWORD,
+        "iris_admin_email": "secret@example.test",
+        "iris_admin_password": SECRET_PASSWORD,
     }
-    env = {"IRIS_STAFF_EMAIL": "env@example.test", "IRIS_STAFF_PASSWORD": ENV_PASSWORD}
+    env = {"IRIS_ADMIN_EMAIL": "env@example.test", "IRIS_ADMIN_PASSWORD": ENV_PASSWORD}
 
     assert run_script([], env=env, secrets=secrets) == [
         ("env@example.test", ENV_PASSWORD)
@@ -140,7 +140,7 @@ def test_environment_beats_secret(run_script):
 
 def test_argument_beats_environment(run_script, tables):
     tables.clear()
-    env = {"IRIS_STAFF_EMAIL": "env@example.test", "IRIS_STAFF_PASSWORD": ENV_PASSWORD}
+    env = {"IRIS_ADMIN_EMAIL": "env@example.test", "IRIS_ADMIN_PASSWORD": ENV_PASSWORD}
 
     assert run_script(["arg@example.test", PASSWORD], env=env) == [
         ("arg@example.test", PASSWORD)
@@ -206,37 +206,37 @@ def test_no_email_anywhere_names_every_source(run_script):
         run_script([])
 
     message = str(caught.value)
-    assert "IRIS_STAFF_EMAIL" in message
-    assert "iris_staff_email" in message
+    assert "IRIS_ADMIN_EMAIL" in message
+    assert "iris_admin_email" in message
 
 
 # --- script: refusals --------------------------------------------------------
 
 
-def test_it_refuses_when_a_staff_user_exists(run_script, tables):
-    tables.users.add_row(email="old@example.test", is_staff=True)
+def test_it_refuses_when_a_admin_user_exists(run_script, tables):
+    tables.users.add_row(email="old@example.test", is_admin=True)
 
-    with pytest.raises(RuntimeError, match="a staff user already exists"):
+    with pytest.raises(RuntimeError, match="an admin user already exists"):
         run_script(["new@example.test", PASSWORD])
 
     assert tables.users.get(email="new@example.test") is None
 
 
-def test_it_does_not_read_a_password_after_finding_staff(run_script, tables):
-    tables.users.add_row(email="old@example.test", is_staff=True)
+def test_it_does_not_read_a_password_after_finding_admin(run_script, tables):
+    tables.users.add_row(email="old@example.test", is_admin=True)
     with pytest.raises(RuntimeError):
         run_script(["new@example.test"], secrets={})
 
-    assert "iris_staff_password" not in run_script.secrets.asked
+    assert "iris_admin_password" not in run_script.secrets.asked
 
 
 def test_it_does_not_touch_an_existing_row_for_the_email(run_script, tables):
-    row = tables.users.add_row(email="same@example.test", is_staff=None)
+    row = tables.users.add_row(email="same@example.test", is_admin=None)
 
     with pytest.raises(RuntimeError):
         run_script(["same@example.test", PASSWORD])
 
-    assert row["is_staff"] is None
+    assert row["is_admin"] is None
     assert row.saves == 0
 
 
@@ -259,7 +259,7 @@ def test_the_script_has_no_prompt_and_no_network():
 def test_the_script_names_its_run_instructions():
     doc = ast.get_docstring(ast.parse(SCRIPT.read_text(encoding="utf-8")))
 
-    for needle in ("DEPL-03", "iris_staff_password", "just create-staff"):
+    for needle in ("DEPL-03", "iris_admin_password", "just create-admin"):
         assert needle in doc
 
 
@@ -268,7 +268,7 @@ def test_the_script_names_its_run_instructions():
 
 @pytest.fixture
 def launcher(load_tool):
-    return load_tool("create_staff")
+    return load_tool("create_admin")
 
 
 class FakeTask:
@@ -357,7 +357,7 @@ def test_launch_passes_email_and_password(launcher):
     )
 
     assert result == ("created", None)
-    assert server.launched == [("script:CreateStaff", ("a@example.test", PASSWORD))]
+    assert server.launched == [("script:CreateAdmin", ("a@example.test", PASSWORD))]
 
 
 def test_launch_passes_only_the_email_when_there_is_no_password(launcher):
@@ -365,17 +365,17 @@ def test_launch_passes_only_the_email_when_there_is_no_password(launcher):
 
     launcher.launch_script(server, "a@example.test", None, 30, sleep=_no_sleep)
 
-    assert server.launched == [("script:CreateStaff", ("a@example.test",))]
+    assert server.launched == [("script:CreateAdmin", ("a@example.test",))]
 
 
 def test_launch_reports_a_failed_task_with_its_error(launcher):
-    task = FakeTask(["failed"], error="RuntimeError: a staff user already exists")
+    task = FakeTask(["failed"], error="RuntimeError: an admin user already exists")
 
     result = launcher.launch_script(
         FakeServer(task), "a@example.test", PASSWORD, 30, sleep=_no_sleep
     )
 
-    assert result == ("failed", "RuntimeError: a staff user already exists")
+    assert result == ("failed", "RuntimeError: an admin user already exists")
 
 
 class RaisingErrorTask(FakeTask):
@@ -386,14 +386,14 @@ class RaisingErrorTask(FakeTask):
 
 
 def test_launch_reports_a_failure_when_get_error_raises(launcher):
-    task = RaisingErrorTask(["failed"], error="a staff user already exists")
+    task = RaisingErrorTask(["failed"], error="an admin user already exists")
 
     result = launcher.launch_script(
         FakeServer(task), "a@example.test", PASSWORD, 30, sleep=_no_sleep
     )
 
     assert result[0] == "failed"
-    assert "a staff user already exists" in result[1]
+    assert "an admin user already exists" in result[1]
     assert PASSWORD not in result[1]
 
 
@@ -425,21 +425,21 @@ def test_a_failed_task_error_never_echoes_the_password(launcher):
     assert PASSWORD not in text
 
 
-def test_ensure_staff_is_idempotent(launcher, tables):
-    tables.users.add_row(email="a@example.test", is_staff=True)
+def test_ensure_admin_is_idempotent(launcher, tables):
+    tables.users.add_row(email="a@example.test", is_admin=True)
     server = FakeServer(FakeTask(["completed"]))
 
-    result = launcher.ensure_staff("a@example.test", PASSWORD, server, tables)
+    result = launcher.ensure_admin("a@example.test", PASSWORD, server, tables)
 
     assert result == "present"
     assert server.launched == []
 
 
-def test_ensure_staff_launches_when_the_row_is_not_staff(launcher, tables):
-    tables.users.add_row(email="a@example.test", is_staff=None)
+def test_ensure_admin_launches_when_the_row_is_not_admin(launcher, tables):
+    tables.users.add_row(email="a@example.test", is_admin=None)
     server = FakeServer(FakeTask(["completed"]))
 
-    result = launcher.ensure_staff(
+    result = launcher.ensure_admin(
         "a@example.test", PASSWORD, server, tables, sleep=_no_sleep
     )
 
@@ -447,11 +447,11 @@ def test_ensure_staff_launches_when_the_row_is_not_staff(launcher, tables):
     assert len(server.launched) == 1
 
 
-def test_ensure_staff_raises_with_the_script_error(launcher, tables):
+def test_ensure_admin_raises_with_the_script_error(launcher, tables):
     server = FakeServer(FakeTask(["failed"], error="RuntimeError: nope"))
 
     with pytest.raises(launcher.ScriptFailed, match="nope"):
-        launcher.ensure_staff(
+        launcher.ensure_admin(
             "a@example.test", PASSWORD, server, tables, sleep=_no_sleep
         )
 
@@ -463,10 +463,10 @@ class FakeUsersApi:
 
     def signup_with_email(self, email, password):
         self.calls.append((email, password))
-        return self.tables.users.add_row(email=email, is_staff=None)
+        return self.tables.users.add_row(email=email, is_admin=None)
 
 
-def test_ensure_viewer_creates_a_non_staff_user_once(launcher, tables):
+def test_ensure_viewer_creates_a_non_admin_user_once(launcher, tables):
     users_api = FakeUsersApi(tables)
 
     first = launcher.ensure_viewer("v@example.test", PASSWORD, users_api, tables)
@@ -474,13 +474,13 @@ def test_ensure_viewer_creates_a_non_staff_user_once(launcher, tables):
 
     assert (first, second) == ("created", "present")
     assert users_api.calls == [("v@example.test", PASSWORD)]
-    assert not tables.users.get(email="v@example.test")["is_staff"]
+    assert not tables.users.get(email="v@example.test")["is_admin"]
 
 
 def test_dev_credentials_are_local_constants(launcher):
-    assert launcher.DEV_STAFF_EMAIL == "staff@example.test"
+    assert launcher.DEV_ADMIN_EMAIL == "admin@example.test"
     assert launcher.DEV_VIEWER_EMAIL == "viewer@example.test"
-    assert len(launcher.DEV_STAFF_PASSWORD) >= 8
+    assert len(launcher.DEV_ADMIN_PASSWORD) >= 8
     assert len(launcher.DEV_VIEWER_PASSWORD) >= 8
 
 
@@ -488,7 +488,7 @@ def test_dev_credentials_are_local_constants(launcher):
 
 
 def test_parser_takes_no_secret_arguments():
-    source = (ROOT / "tools" / "create_staff.py").read_text(encoding="utf-8")
+    source = (ROOT / "tools" / "create_admin.py").read_text(encoding="utf-8")
 
     for flag in ("--password", "--key", "--token"):
         assert f'"{flag}"' not in source
@@ -499,8 +499,8 @@ def test_dev_mode_uses_the_dev_constants(launcher):
     parsed = launcher.parse_args(["--dev"], {})
 
     assert parsed == (
-        launcher.DEV_STAFF_EMAIL,
-        launcher.DEV_STAFF_PASSWORD,
+        launcher.DEV_ADMIN_EMAIL,
+        launcher.DEV_ADMIN_PASSWORD,
         True,
     )
 
@@ -512,7 +512,7 @@ def test_without_dev_the_email_is_required(launcher):
 
 def test_without_dev_the_password_comes_from_the_environment(launcher):
     parsed = launcher.parse_args(
-        ["me@example.test"], {"IRIS_STAFF_PASSWORD": ENV_PASSWORD}
+        ["me@example.test"], {"IRIS_ADMIN_PASSWORD": ENV_PASSWORD}
     )
 
     assert parsed == ("me@example.test", ENV_PASSWORD, False)
@@ -553,9 +553,9 @@ def test_main_creates_dev_accounts_and_exits_zero(launcher, tables, capsys):
 
     assert code == 0
     out = capsys.readouterr().out
-    assert "staff account created (staff@example.test)" in out
+    assert "admin account created (admin@example.test)" in out
     assert "viewer account created (viewer@example.test)" in out
-    assert launcher.DEV_STAFF_PASSWORD not in out
+    assert launcher.DEV_ADMIN_PASSWORD not in out
     assert launcher.DEV_VIEWER_PASSWORD not in out
 
 
@@ -563,7 +563,7 @@ def test_main_says_where_a_generated_password_is(launcher, tables, capsys):
     server, code = _main(launcher, tables, ["completed"], ["me@example.test"])
 
     assert code == 0
-    assert server.launched == [("script:CreateStaff", ("me@example.test",))]
+    assert server.launched == [("script:CreateAdmin", ("me@example.test",))]
     out = capsys.readouterr().out
     assert "password generated: read it in just logs" in out
 
@@ -574,13 +574,13 @@ def test_main_exits_one_with_the_script_error(launcher, tables, capsys):
         tables,
         ["failed"],
         ["me@example.test"],
-        {"IRIS_STAFF_PASSWORD": ENV_PASSWORD},
-        error="RuntimeError: a staff user already exists",
+        {"IRIS_ADMIN_PASSWORD": ENV_PASSWORD},
+        error="RuntimeError: an admin user already exists",
     )
 
     assert code == 1
     captured = capsys.readouterr()
-    assert "a staff user already exists" in captured.err
+    assert "an admin user already exists" in captured.err
     assert ENV_PASSWORD not in captured.out + captured.err
 
 

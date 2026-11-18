@@ -11,7 +11,7 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
     # link anyway, so reading them is public by design.
     PUBLIC_KEYS = ("vdo_origin", "vdo_profile", "vdo_salt")
 
-    # Upper bound on a profile staff may save. It stops an absurd paste being
+    # Upper bound on a profile admin may save. It stops an absurd paste being
     # stored, and is checked before any validation work.
     MAX_PROFILE_LENGTH = 2000
 
@@ -53,8 +53,8 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
     @anvil.server.server_method
     @classmethod
     def get_profile(cls):
-        """The stored vdo.ninja profile text as saved, or "". Staff only."""
-        permissions.require_staff()
+        """The stored vdo.ninja profile text as saved, or "". Admin only."""
+        permissions.require_admin()
         row = app_tables.setting.get(key="vdo_profile")
         if row is None:
             return ""
@@ -63,13 +63,13 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
     @anvil.server.server_method
     @classmethod
     def set_profile(cls, text):
-        """Validate and store the vdo.ninja profile. Staff only.
+        """Validate and store the vdo.ninja profile. Admin only.
 
         Returns the normalised profile that was stored. An invalid profile
         raises ValueError with the validator's message and changes nothing.
         The empty profile is allowed and means plain vdo.ninja.
         """
-        permissions.require_staff()
+        permissions.require_admin()
         if not isinstance(text, str):
             raise ValueError("The settings must be text.")
         if len(text) > cls.MAX_PROFILE_LENGTH:

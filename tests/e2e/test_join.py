@@ -132,26 +132,26 @@ def test_empty_name_is_refused_and_nothing_is_handed_off(page: Page):
     assert not page.get_by_text(ERROR_BANNER).is_visible()
 
 
-def test_root_and_staff_still_load_cold(page: Page):
+def test_root_and_admin_still_load_cold(page: Page):
     page.goto("", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
-    expect(page.get_by_role("heading", name="Staff sign-in")).to_be_visible(
+    expect(page.get_by_role("heading", name="Admin sign-in")).to_be_visible(
         timeout=FIRST_LOAD_MS
     )
     assert page.get_by_role("heading", name="No such meeting").count() == 0
 
-    page.goto("staff", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
-    expect(page.get_by_role("heading", name="Staff sign-in")).to_be_visible(
+    page.goto("admin", wait_until="domcontentloaded", timeout=FIRST_LOAD_MS)
+    expect(page.get_by_role("heading", name="Admin sign-in")).to_be_visible(
         timeout=FIRST_LOAD_MS
     )
     assert page.get_by_role("heading", name="No such meeting").count() == 0
     assert not page.get_by_text(ERROR_BANNER).is_visible()
 
 
-def test_a_link_made_by_staff_opens_for_a_client(staff_page: Page, browser):
-    staff = staff_page
-    staff.get_by_label("Meeting name (optional)").fill("Client call")
-    staff.get_by_role("button", name="Create link").click()
-    link = staff.get_by_label("Meeting link")
+def test_a_link_made_by_admin_opens_for_a_client(admin_page: Page, browser):
+    admin = admin_page
+    admin.get_by_label("Meeting name (optional)").fill("Client call")
+    admin.get_by_role("button", name="Create link").click()
+    link = admin.get_by_label("Meeting link")
     expect(link).to_have_value(re.compile("/[a-z0-9]{8}$"), timeout=VISIBLE_MS)
     url = link.input_value()
     slug = url.rsplit("/", 1)[1]

@@ -22,8 +22,8 @@ def _open_request_form(page: Page):
 
 
 @pytest.mark.parametrize("who", ["known", "unknown"])
-def test_request_shows_one_message(page: Page, staff_login, who):
-    email = staff_login[0] if who == "known" else "nobody@example.invalid"
+def test_request_shows_one_message(page: Page, admin_login, who):
+    email = admin_login[0] if who == "known" else "nobody@example.invalid"
     _open_request_form(page)
 
     page.get_by_label("Email").last.fill(email)

@@ -120,11 +120,19 @@ class FakeTables:
             table.clear()
 
 
-class FakeUser:
-    """A users-table row: `user["email"]`, `user["is_staff"]`."""
+MISSING = object()
 
-    def __init__(self, email="staff@example.test", is_staff=True):
-        self._values = {"email": email, "is_staff": is_staff}
+
+class FakeUser:
+    """A users-table row: `user["email"]`, `user["is_admin"]`."""
+
+    def __init__(self, email="admin@example.test", is_admin=True, **extra):
+        self._values = {"email": email, "is_admin": is_admin}
+        # Extra columns, such as the legacy `is_staff`. Pass is_admin=MISSING
+        # to model a table that has no `is_admin` column yet.
+        self._values.update(extra)
+        if is_admin is MISSING:
+            del self._values["is_admin"]
 
     def __getitem__(self, column):
         return self._values[column]

@@ -11,7 +11,7 @@ RESULTS = (
     ROOT
     / ".planning"
     / "phases"
-    / "02-one-off-meetings-staff-to-client"
+    / "02-one-off-meetings-admin-to-client"
     / "02-SPIKE-RESULTS.md"
 )
 # Test data only: not a code default.
@@ -82,7 +82,7 @@ def test_a_slug_shape_is_joinable(join, slug):
     assert join.is_joinable_slug(slug) is True
 
 
-@pytest.mark.parametrize("slug", ["staff", "ab", "", None, "../x", "a" * 65])
+@pytest.mark.parametrize("slug", ["admin", "ab", "", None, "../x", "a" * 65])
 def test_a_bad_slug_is_not_joinable(join, slug):
     assert join.is_joinable_slug(slug) is False
 
@@ -117,7 +117,7 @@ def test_any_exception_is_the_error_state_with_no_text(join):
     assert result == {"state": "error"}
 
 
-@pytest.mark.parametrize("slug", ["staff", "ab", "", None, "../x"])
+@pytest.mark.parametrize("slug", ["admin", "ab", "", None, "../x"])
 def test_a_slug_that_is_not_joinable_never_calls(join, slug):
     calls = []
 
@@ -352,7 +352,7 @@ def test_unlock_with_an_oversized_input_makes_no_server_call(join):
     assert calls == []
 
 
-@pytest.mark.parametrize("slug", ["staff", "ab", "", None, "../x"])
+@pytest.mark.parametrize("slug", ["admin", "ab", "", None, "../x"])
 def test_unlock_of_a_slug_that_is_not_joinable_never_calls(join, slug):
     calls = []
 

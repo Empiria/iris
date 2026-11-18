@@ -109,7 +109,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         """Everything a join needs for `slug`, or None.
 
         Public by design: it is how a meeting link is opened. It returns None
-        for a slug no staff member created, and for an inactive row, so an
+        for a slug no admin created, and for an inactive row, so an
         invented slug releases no vdo_room. A permanent room releases only that
         it exists and is locked: its vdo_room, title and password come out of
         `unlock`, after the passphrase checks.
@@ -135,8 +135,8 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
     @anvil.server.server_method
     @classmethod
     def create_one_off(cls, title=""):
-        """Create a one-off room. Staff only. Returns its slug and title."""
-        user = permissions.require_staff()
+        """Create a one-off room. Admin only. Returns its slug and title."""
+        user = permissions.require_admin()
         slug = None
         for _ in range(_SLUG_ATTEMPTS):
             candidate = slugs.new_one_off_slug()
@@ -170,7 +170,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         is returned this once: only its slow hash is stored, so nothing here can
         show it again. Raises ValueError (slug rules, or "That name is taken.").
         """
-        user = permissions.require_staff()
+        user = permissions.require_admin()
         slug = slugs.clean_room_slug(slug_text)
         # Duplicates are refused across both kinds of room, and across inactive
         # rows. The table has no uniqueness constraint, so two admins creating
@@ -263,20 +263,20 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
 
     @anvil.server.server_method
     @classmethod
-    def list_for_staff(cls):
+    def list_for_admin(cls):
         """Every room, newest first, as plain summaries. Admins only.
 
         Each summary has the slug, title, kind and creation time. The vdo room,
         vdo password and verifier never leave the server.
         """
-        permissions.require_staff()
+        permissions.require_admin()
         return [_summary(row) for row in _newest_first(list(app_tables.room.search()))]
 
     @anvil.server.server_method
     @classmethod
     def update_title(cls, slug, title):
         """Change a room's title. Admins only. The slug stays as it is (D-7)."""
-        permissions.require_staff()
+        permissions.require_admin()
         row = _find_room(slug)
         if not isinstance(title, str):
             raise ValueError("Title must be text")
@@ -288,7 +288,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
     @classmethod
     def remove(cls, slug):
         """Delete a room for good. Admins only (D-8). Its link stops working."""
-        permissions.require_staff()
+        permissions.require_admin()
         row = _find_room(slug)
         row_slug = row["slug"]
         row.delete()
@@ -303,7 +303,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         old details is out of the room, and any lock is cleared. The new
         passphrase is returned this once; only its slow hash is stored.
         """
-        permissions.require_staff()
+        permissions.require_admin()
         row = _find_room(slug)
         if row["kind"] != "permanent":
             raise ValueError("Only permanent rooms have a passphrase.")
