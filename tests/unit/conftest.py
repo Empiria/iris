@@ -227,3 +227,52 @@ def make_user():
         return FakeUser(email=email, is_admin=is_admin)
 
     return make
+
+
+@pytest.fixture
+def admin(as_user, make_user):
+    """Sign in an admin and return it."""
+    user = make_user(email="admin@example.test", is_admin=True)
+    as_user(user)
+    return user
+
+
+@pytest.fixture
+def Room(load_client_module):  # noqa: N802
+    return load_client_module("services/model/room").Room
+
+
+@pytest.fixture
+def slugs(load_client_module):
+    return load_client_module("services/slugs")
+
+
+@pytest.fixture
+def verifier():
+    return importlib.import_module("iris.verifier")
+
+
+@pytest.fixture
+def fast_kdf(verifier, monkeypatch):
+    """Cheap iterations, so a test of the logic does not pay for 600000."""
+    monkeypatch.setattr(verifier, "ITERATIONS", 1000)
+
+
+@pytest.fixture
+def clock(Room, load_client_module, monkeypatch):
+    """A frozen clock: the model reads `clock.now`, and `advance()` moves it."""
+    import datetime
+
+    from room_helpers import START
+
+    module = load_client_module("services/model/room")
+
+    class Clock:
+        now = START
+
+        def advance(self, **delta):
+            self.now = self.now + datetime.timedelta(**delta)
+
+    frozen = Clock()
+    monkeypatch.setattr(module, "_now", lambda: frozen.now)
+    return frozen

@@ -130,9 +130,8 @@ def test_empty_name_is_refused_and_nothing_is_handed_off(page: Page):
     page.get_by_role("button", name="Join meeting").click()
 
     expect(page.get_by_text(NAME_MESSAGE)).to_be_visible(timeout=VISIBLE_MS)
-    page.wait_for_timeout(500)
-    assert page.url == before
-    assert page.locator("iframe[src]").count() == 0
+    expect(page).to_have_url(before)
+    expect(page.locator("iframe[src]")).to_have_count(0)
     assert not page.get_by_text(ERROR_BANNER).is_visible()
 
 

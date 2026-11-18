@@ -15,25 +15,8 @@ def meetings(load_client_module):
 
 
 @pytest.fixture
-def Room(load_client_module):  # noqa: N802
-    return load_client_module("services/model/room").Room
-
-
-@pytest.fixture
-def slugs(load_client_module):
-    return load_client_module("services/slugs")
-
-
-@pytest.fixture
 def links(load_client_module):
     return load_client_module("services/links")
-
-
-@pytest.fixture
-def admin(as_user, make_user):
-    user = make_user(email="admin@example.test", is_admin=True)
-    as_user(user)
-    return user
 
 
 # --- registration ---------------------------------------------------------
@@ -276,6 +259,17 @@ def test_create_permanent_room_refuses_a_one_off_slug(
 def test_create_permanent_room_refuses_non_text(meetings, tables, admin, fast_kdf):
     with pytest.raises(ValueError):
         meetings.create_permanent_room(None)
+
+    assert tables.room.rows == []
+
+
+def test_create_permanent_room_the_model_refuses_an_anonymous_caller(
+    meetings, tables, as_user, fast_kdf
+):
+    as_user(None)
+
+    with pytest.raises(anvil.server.PermissionDenied):
+        meetings.create_permanent_room("Acme Board")
 
     assert tables.room.rows == []
 

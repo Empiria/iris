@@ -109,13 +109,6 @@ def permissions(load_client_module):
     return load_client_module("services/permissions")
 
 
-@pytest.fixture
-def admin(as_user, make_user):
-    user = make_user(email="admin@example.test", is_admin=True)
-    as_user(user)
-    return user
-
-
 def _profile_rows(tables):
     return [r for r in tables.setting.rows if r["key"] == "vdo_profile"]
 

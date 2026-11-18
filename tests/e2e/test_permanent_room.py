@@ -132,8 +132,7 @@ def test_wrong_passphrase_says_incorrect_and_stays(page: Page):
     # The field is cleared after the submit, and the page has not moved.
     expect(page.get_by_label("Passphrase")).to_have_value("")
     _assert_iris_address_is_clean(page)
-    assert page.locator("iframe[src]").count() == 0
-    page.wait_for_timeout(500)
+    expect(page.locator("iframe[src]")).to_have_count(0)
     assert reached == []
     assert SEEDED_PERMANENT_TITLE not in page.locator("body").inner_text()
     assert not page.get_by_text(ERROR_BANNER).is_visible()

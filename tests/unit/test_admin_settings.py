@@ -24,13 +24,6 @@ def Setting(load_client_module):  # noqa: N802
     return load_client_module("services/model/setting").Setting
 
 
-@pytest.fixture
-def admin(as_user, make_user):
-    user = make_user(email="admin@example.test", is_admin=True)
-    as_user(user)
-    return user
-
-
 def _registration(name):
     found = [
         r for r in anvil.server.registrations if r.kind == "callable" and r.name == name
@@ -91,6 +84,46 @@ def test_the_model_refuses_when_the_runtime_gate_is_bypassed(
         admin_settings.update_profile("quality=1")
     with pytest.raises(permissions.PermissionDenied):
         admin_settings.get_profile()
+
+    assert tables.setting.rows == []
+
+
+def test_get_profile_refuses_an_anonymous_caller(
+    admin_settings, tables, permissions, as_user
+):
+    as_user(None)
+
+    with pytest.raises(permissions.PermissionDenied):
+        admin_settings.get_profile()
+
+
+def test_get_profile_refuses_a_non_admin(
+    admin_settings, tables, permissions, as_user, make_user
+):
+    as_user(make_user(email="viewer@example.test", is_admin=False))
+
+    with pytest.raises(permissions.PermissionDenied):
+        admin_settings.get_profile()
+
+
+def test_update_profile_refuses_an_anonymous_caller_and_writes_nothing(
+    admin_settings, tables, permissions, as_user
+):
+    as_user(None)
+
+    with pytest.raises(permissions.PermissionDenied):
+        admin_settings.update_profile("quality=1")
+
+    assert tables.setting.rows == []
+
+
+def test_update_profile_refuses_a_non_admin_and_writes_nothing(
+    admin_settings, tables, permissions, as_user, make_user
+):
+    as_user(make_user(email="viewer@example.test", is_admin=False))
+
+    with pytest.raises(permissions.PermissionDenied):
+        admin_settings.update_profile("quality=1")
 
     assert tables.setting.rows == []
 
