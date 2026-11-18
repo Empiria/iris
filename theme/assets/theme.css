@@ -81,6 +81,12 @@ a {
   font: inherit;
 }
 
+.iris-textarea {
+  min-height: 6rem;
+  resize: vertical;
+  font-family: ui-monospace, monospace;
+}
+
 .iris-button {
   padding: var(--iris-space-2) var(--iris-space-4);
   border: 1px solid var(--iris-outline);

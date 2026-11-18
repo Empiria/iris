@@ -96,3 +96,143 @@ def test_setting_methods_are_registered_server_methods(Setting):
     }
 
     assert {"Setting.vdo_config", "Setting.get_value"} <= registered
+
+
+# --- set_profile and get_profile (staff only) -----------------------------
+
+
+@pytest.fixture
+def permissions(load_client_module):
+    return load_client_module("services/permissions")
+
+
+@pytest.fixture
+def staff(as_user, make_user):
+    user = make_user(email="staff@example.test", is_staff=True)
+    as_user(user)
+    return user
+
+
+def _profile_rows(tables):
+    return [r for r in tables.setting.rows if r["key"] == "vdo_profile"]
+
+
+def test_set_profile_stores_the_normalised_profile_and_returns_it(
+    Setting, tables, staff
+):
+    result = Setting.set_profile("&quality=1&screensharequality=2")
+
+    assert result == "quality=1&screensharequality=2"
+    rows = _profile_rows(tables)
+    assert len(rows) == 1
+    assert rows[0]["value"] == "quality=1&screensharequality=2"
+
+
+def test_set_profile_updates_the_existing_row_and_saves_it(Setting, tables, staff):
+    _put(tables, "vdo_profile", "old=1")
+    existing = _profile_rows(tables)[0]
+
+    Setting.set_profile("new=2")
+
+    assert _profile_rows(tables) == [existing]
+    assert existing["value"] == "new=2"
+    assert existing.saves >= 1
+
+
+def test_the_next_vdo_config_uses_the_saved_profile(Setting, tables, staff):
+    Setting.set_profile("quality=1")
+
+    assert Setting.vdo_config()["profile"] == "quality=1"
+    Setting.set_profile("quality=2")
+    assert Setting.vdo_config()["profile"] == "quality=2"
+
+
+def test_set_profile_accepts_the_empty_profile(Setting, tables, staff):
+    _put(tables, "vdo_profile", "quality=1")
+
+    assert Setting.set_profile("") == ""
+
+    assert _profile_rows(tables)[0]["value"] == ""
+    assert Setting.vdo_config()["profile"] == ""
+
+
+@pytest.mark.parametrize(
+    "bad", ["&meshcast", "&relay", "&password=x", "&room=x", "&salt=x", "&hash=x"]
+)
+def test_set_profile_refuses_a_bad_profile_and_keeps_the_old_one(
+    Setting, tables, staff, bad
+):
+    _put(tables, "vdo_profile", "quality=1")
+
+    with pytest.raises(ValueError) as caught:
+        Setting.set_profile(bad)
+
+    assert "profile parameter" in str(caught.value)
+    assert _profile_rows(tables)[0]["value"] == "quality=1"
+
+
+def test_set_profile_refuses_a_bad_profile_without_creating_a_row(
+    Setting, tables, staff
+):
+    with pytest.raises(ValueError):
+        Setting.set_profile("&meshcast")
+
+    assert _profile_rows(tables) == []
+
+
+def test_set_profile_refuses_input_over_2000_characters_before_validating(
+    Setting, tables, staff, monkeypatch, load_client_module
+):
+    vdo = load_client_module("services/vdo")
+    seen = []
+    monkeypatch.setattr(vdo, "validate_profile", lambda text: seen.append(text))
+
+    with pytest.raises(ValueError):
+        Setting.set_profile("a" * 2001)
+
+    assert seen == []
+    assert _profile_rows(tables) == []
+
+
+def test_set_profile_accepts_exactly_2000_characters(Setting, tables, staff):
+    text = "q=" + "a" * 1998
+
+    assert Setting.set_profile(text) == text
+
+
+@pytest.mark.parametrize("bad", [None, 5, b"quality=1", ["quality=1"]])
+def test_set_profile_refuses_a_non_string(Setting, tables, staff, bad):
+    with pytest.raises(ValueError):
+        Setting.set_profile(bad)
+
+    assert _profile_rows(tables) == []
+
+
+def test_get_profile_returns_the_raw_stored_text(Setting, tables, staff):
+    assert Setting.get_profile() == ""
+    _put(tables, "vdo_profile", "quality=1")
+
+    assert Setting.get_profile() == "quality=1"
+
+
+@pytest.mark.parametrize("who", ["anonymous", "non-staff"])
+def test_set_and_get_profile_refuse_anyone_but_staff(
+    Setting, tables, permissions, as_user, make_user, who
+):
+    as_user(None if who == "anonymous" else make_user(is_staff=False))
+    _put(tables, "vdo_profile", "quality=1")
+
+    with pytest.raises(permissions.PermissionDenied):
+        Setting.set_profile("quality=2")
+    with pytest.raises(permissions.PermissionDenied):
+        Setting.get_profile()
+
+    assert _profile_rows(tables)[0]["value"] == "quality=1"
+
+
+def test_profile_methods_are_registered_server_methods(Setting):
+    registered = {
+        r.name for r in anvil.server.registrations if r.kind == "server_method"
+    }
+
+    assert {"Setting.set_profile", "Setting.get_profile"} <= registered

@@ -12,8 +12,12 @@ from ._anvil_designer import StaffTemplate
 
 
 class Staff(StaffTemplate):
+    # A class default, so the render effect can read it however early it first runs.
+    _profile_loaded = False
+
     def __init__(self, **properties):
         self.init_components(**properties)
+        self._profile_loaded = False
         self.add_event_handler("show", self.form_show)
 
     def form_show(self, **event_args):
@@ -32,6 +36,15 @@ class Staff(StaffTemplate):
             self.dom_nodes["signed_in_as"].textContent = "Signed in as " + str(
                 staff_session.staff_email()
             )
+            if not self._profile_loaded:
+                self._profile_loaded = True
+                self._load_profile()
+        else:
+            # Signed out: drop the saved text from the page, and load it again
+            # the next time a staff member signs in.
+            self._profile_loaded = False
+            self.dom_nodes["profile_input"].value = ""
+            self._show_profile_message("")
 
     def _show_message(self, text):
         message = self.dom_nodes["signin_message"]
@@ -108,3 +121,37 @@ class Staff(StaffTemplate):
     def _on_copy(self, event, **properties):
         self._show_copy_message("")
         self._copy_link()
+
+    def _show_profile_message(self, text):
+        message = self.dom_nodes["profile_message"]
+        message.textContent = text
+        message.hidden = text == ""
+
+    def _load_profile(self):
+        try:
+            self.dom_nodes["profile_input"].value = anvil.server.call("get_profile")
+        except permissions.PermissionDenied:
+            # Not a refresh: this runs inside the render effect, and a refresh
+            # would change the signal it reads.
+            self._show_profile_message("You are not signed in as staff.")
+        except Exception:
+            self._show_profile_message("Could not load the settings. Reload the page.")
+
+    def _on_profile_save(self, event, **properties):
+        text = str(self.dom_nodes["profile_input"].value or "")
+        self._show_profile_message("")
+        button = self.dom_nodes["profile_save"]
+        button.disabled = True
+        try:
+            saved = anvil.server.call("update_profile", text)
+            self.dom_nodes["profile_input"].value = saved
+            self._show_profile_message("Saved. New joins use these settings.")
+        except permissions.PermissionDenied:
+            self._show_profile_message("You are not signed in as staff.")
+            staff_session.refresh()
+        except ValueError as error:
+            self._show_profile_message(str(error))
+        except Exception:
+            self._show_profile_message("Could not save the settings. Try again.")
+        finally:
+            button.disabled = False

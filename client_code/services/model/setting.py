@@ -1,7 +1,7 @@
 import anvil.server
 from anvil.tables import app_tables
 
-from iris.services import vdo  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import permissions, vdo  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class Setting(app_tables.setting.Row, buffered=True, attrs=True):
@@ -10,6 +10,10 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
     # Everything these keys hold is released to anyone with a valid meeting
     # link anyway, so reading them is public by design.
     PUBLIC_KEYS = ("vdo_origin", "vdo_profile", "vdo_salt")
+
+    # Upper bound on a profile staff may save. It stops an absurd paste being
+    # stored, and is checked before any validation work.
+    MAX_PROFILE_LENGTH = 2000
 
     @anvil.server.server_method
     @classmethod
@@ -45,3 +49,40 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
             "profile": profile,
             "salt": cls.get_value("vdo_salt") or None,
         }
+
+    @anvil.server.server_method
+    @classmethod
+    def get_profile(cls):
+        """The stored vdo.ninja profile text as saved, or "". Staff only."""
+        permissions.require_staff()
+        row = app_tables.setting.get(key="vdo_profile")
+        if row is None:
+            return ""
+        return row["value"] or ""
+
+    @anvil.server.server_method
+    @classmethod
+    def set_profile(cls, text):
+        """Validate and store the vdo.ninja profile. Staff only.
+
+        Returns the normalised profile that was stored. An invalid profile
+        raises ValueError with the validator's message and changes nothing.
+        The empty profile is allowed and means plain vdo.ninja.
+        """
+        permissions.require_staff()
+        if not isinstance(text, str):
+            raise ValueError("The settings must be text.")
+        if len(text) > cls.MAX_PROFILE_LENGTH:
+            raise ValueError(
+                "The settings are too long (at most "
+                + str(cls.MAX_PROFILE_LENGTH)
+                + " characters)."
+            )
+        profile = vdo.validate_profile(text)
+        row = app_tables.setting.get(key="vdo_profile")
+        if row is None:
+            app_tables.setting.add_row(key="vdo_profile", value=profile)
+        else:
+            row.update(value=profile)
+            row.save()
+        return profile
