@@ -1,32 +1,35 @@
 # Iris
 
-Short, Google-Meet-style meeting links that open [VDO.Ninja](https://vdo.ninja)
-rooms.
+**Short meeting links that just work.** Send a client `meet.example.com/dk2wjd9d`,
+and they are in a high-quality video call one click later: no account, no
+install, no long URL.
 
-A VDO.Ninja room address is a long URL full of parameters, and clients don't
-always react well to it. Iris replaces it with a link like
-`meet.example.com/dk2wjd9d`. A member of staff creates the link, the client
-opens it with no account, and both land in a peer-to-peer VDO.Ninja call with
-your call settings already applied. The client never sees the query string.
+- **Short, memorable links.** A Google-Meet-style address in place of a long
+  VDO.Ninja URL full of parameters. Easy to say, paste and trust.
+- **Peer-to-peer calls.** Rooms are [VDO.Ninja](https://vdo.ninja) rooms, so
+  media goes directly between participants. Iris never forces a relay.
+- **No accounts for guests.** Clients open the link and join. Only your staff
+  sign in.
+- **Your call settings, applied for you.** Staff control the quality profile
+  once (for example sharp screen sharing, AV1 first) and every call uses it.
+- **Works well across browsers.** The room opens inside the Iris page where
+  that is smooth, and hands off straight to VDO.Ninja where that is better.
+- **Self-hostable.** [Anvil](https://anvil.works) app, Python on both client
+  and server, no local build step. Nothing specific to Empiria lives in the
+  code, so anyone can run their own copy.
 
-[Empiria](https://empiria.co.uk) runs its instance at meet.empiria.co.uk. The
-repo is built so that anyone can deploy their own copy: nothing specific to
-Empiria lives in the code, only in configuration and secrets.
+> **Read the story:** [Why I use VDO Ninja for video calling and screen
+> sharing](https://empiria.co.uk/blog/vdo_ninja/), the Empiria blog post behind
+> Iris.
+> <!-- TODO(Owen): replace with the Iris blog post link if a dedicated post exists; none found in the repos or vault. -->
 
-Iris is an [Anvil](https://anvil.works) app, written in Python on both client
-and server, with no local build step.
+[Empiria](https://empiria.co.uk) runs its instance at meet.empiria.co.uk.
 
-## Status
+## Who it is for
 
-- Built: staff sign-in, one-off links, the client join page, the iframe and
-  redirect hand-off, and the call-settings profile.
-- **Planned, not built:** permanent named rooms (for example
-  `/infinite-worlds`) protected by a passphrase, and the staff tools to manage
-  rooms. The `room` table already has a `kind` column for them, but the code
-  only creates one-off rooms today.
-- Not in v1: expiring or one-time links, invites, a join audit and a waiting
-  room.
-- No licence has been chosen yet. See [Licence](#licence).
+A member of staff creates a link, the client opens it, and both land in a
+peer-to-peer VDO.Ninja call with your call settings already applied. The client
+never sees the query string.
 
 ## How it works
 
@@ -65,9 +68,8 @@ VDO.Ninja address instead:
   can't be told from Chrome by its user agent, so Iris asks the browser
   (`navigator.brave.isBrave()`).
 - **Safari on iOS (iPhone and iPad) and in-app browsers** (Facebook, Instagram,
-  LinkedIn, Snapchat, WeChat, Line, Android WebViews and similar). This is a
-  precaution: the iframe behaviour on these browsers was not tested, so they
-  are sent to the room directly. An in-app browser that Iris doesn't recognise
+  LinkedIn, Snapchat, WeChat, Line, Android WebViews and similar). They are
+  sent to the room directly, which is the safe route on these browsers. An in-app browser that Iris doesn't recognise
   is treated as the browser it imitates.
 - Any browser Iris can't classify also redirects.
 
@@ -122,10 +124,9 @@ You need an Anvil account. The steps below create your own copy of the app.
 6. **Set the profile.** Add `vdo_profile` (and, if you host VDO.Ninja yourself,
    `vdo_origin`) rows to the `setting` table.
 7. **Custom domain.** Point your domain at the app using Anvil's custom domain
-   settings. Meeting links are always cold visits to `/<slug>`. A cold load of
-   `/<slug>` was verified on the local stack only. **It has not been tested on
-   a hosted app with a custom domain**, so check it on your own domain before
-   you rely on it.
+   settings. Meeting links are always cold visits to `/<slug>`. Check a cold load of
+   `/<slug>` on your own domain once it is set up (see
+   [Status and known limits](#status-and-known-limits)).
 
 ### Create the first staff user
 
@@ -190,6 +191,26 @@ Run `just` to list every recipe. `just verify` is the gate before a commit.
 - `tests/unit/`, `tests/e2e/`: the two test suites
 - `justfile`, `Containerfile`: checks and the local stack
 - `pyproject.toml`, `uv.lock`: dev and test tooling only, not used by the app
+
+## Status and known limits
+
+**Built:** staff sign-in, one-off links, the client join page, the iframe and
+redirect hand-off, and the call-settings profile.
+
+**Planned:** permanent named rooms (for example `/infinite-worlds`) protected by
+a passphrase, and the staff tools to manage them. The `room` table already has
+a `kind` column for them. Expiring or one-time links, invites, a join audit and
+a waiting room are outside v1.
+
+**Known limits:**
+
+- A cold load of `/<slug>` has been verified on the local stack. Check it on
+  your own custom domain on a hosted app before you rely on it.
+- Safari on iOS and in-app browsers are redirected rather than embedded, because
+  the iframe behaviour there has not been tested.
+- There is no settings page yet: edit the `setting` rows in the Data Tables
+  editor.
+- No licence has been chosen yet. See [Licence](#licence).
 
 ## Licence
 
