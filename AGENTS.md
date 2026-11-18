@@ -115,6 +115,7 @@ Host results, 2026-11-18, `just host-check` on podman 6.2.0: `just build` took 2
 
 - After a dependency or `package_name` change in the IDE, run `just fresh` so the `--dep-id` and `--app` flags are regenerated. The justfile reads `package_name` from `anvil.yaml`, so a rename needs no edit there.
 - An IDE save can drop the executable bit from files under `tools/`. Always run them through `uv run --script` (or `python3`), never as `./tools/x.py`.
+- Each checkout gets its own container and database volume, `iris-anvil-<checkout dir>` and `iris-anvil-<checkout dir>-data`, so a stale container left by another checkout can't block this one. `IRIS_CONTAINER` overrides the name. All of them publish port 3030, so only one stack runs at a time. `just stack-reset` force-removes this checkout's container, and host-check runs it first.
 - `IRIS_STACK_RETRIES` raises how long `seed` and `e2e` wait for a slow first boot (default 30 tries, 2 s apart).
 - A client error shows in `just logs` as `Error report from client code:` with a traceback.
 

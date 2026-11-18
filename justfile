@@ -18,8 +18,11 @@ boot_timeout := env_var_or_default("IRIS_BOOT_TIMEOUT", "600")
 # here. The app is mounted at /srv/<package>.
 package := `sed -n 's/^package_name: *//p' anvil.yaml`
 img := "iris-anvil-dev"
-ctr := "iris-anvil"
-vol := "iris-anvil-data"
+# One container and database per checkout, named after its directory, so a
+# stale container left by another checkout or worktree can't block this one.
+# IRIS_CONTAINER overrides the name. Only one stack can hold port 3030 at a time.
+ctr := env_var_or_default("IRIS_CONTAINER", "iris-anvil-" + file_name(justfile_directory()))
+vol := ctr + "-data"
 
 export IRIS_UPLINK_URL := uplink_url
 
@@ -144,6 +147,18 @@ fresh: (_need-podman "fresh")
     -podman volume rm {{ vol }}
     just up
 
+# [host] Force-remove the stack's container, even one that won't stop. Fails if it is still there.
+stack-reset: (_need-podman "stack-reset")
+    #!/usr/bin/env bash
+    set -uo pipefail
+    podman container exists {{ ctr }} || { echo "stack-reset: no container {{ ctr }}"; exit 0; }
+    podman rm -f --time 0 {{ ctr }} && exit 0
+    echo "stack-reset: rm failed, cleaning up {{ ctr }} and retrying"
+    podman container cleanup {{ ctr }} || true
+    podman rm -f --time 0 {{ ctr }} && exit 0
+    echo "stack-reset: {{ ctr }} is wedged and could not be removed"
+    exit 1
+
 # [host] Follow the stack's log.
 logs: (_need-podman "logs")
     podman logs -f {{ ctr }}
@@ -185,6 +200,9 @@ host-check: (_need-podman "host-check")
     begin "podman"
     podman_version="$(podman --version)"
     echo "$podman_version"
+
+    begin "this checkout's container ({{ ctr }}) is not wedged"
+    just stack-reset
 
     begin "setup: CLAUDE.md link, exclude entries, pre-commit hook, Playwright chromium"
     gitconfig="$(git rev-parse --git-common-dir)/config"
