@@ -27,6 +27,11 @@ IPHONE_UA = (
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 "
     "(KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
 )
+# Looks like Brave to the page's own check. Shared with test_permanent_room.py.
+BRAVE_INIT_SCRIPT = (
+    "Object.defineProperty(navigator, 'brave', "
+    "{ value: { isBrave: () => Promise.resolve(true) } });"
+)
 
 
 def _ready(page: Page):
@@ -79,10 +84,7 @@ def test_iphone_join_redirects_instead_of_embedding(browser: Browser, base_url: 
 def test_brave_join_redirects_instead_of_embedding(browser: Browser, base_url: str):
     """Brave looks like Chrome but its Shields break the room inside an iframe."""
     context = browser.new_context(base_url=base_url)
-    context.add_init_script(
-        "Object.defineProperty(navigator, 'brave', "
-        "{ value: { isBrave: () => Promise.resolve(true) } });"
-    )
+    context.add_init_script(BRAVE_INIT_SCRIPT)
     page = context.new_page()
     try:
         _ready(page)
