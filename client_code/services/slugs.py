@@ -8,6 +8,8 @@ generation only runs on the server, so `secrets` is loaded inside the
 function that needs it.
 """
 
+from iris.services import limits  # pyright: ignore[reportAttributeAccessIssue]
+
 # 31 characters: no i, l, o, 0 or 1, which are easy to misread aloud or in print.
 # 31 ** 8 is about 8.5e11 slugs.
 ONE_OFF_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
@@ -17,7 +19,7 @@ VDO_ROOM_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
 VDO_ROOM_LENGTH = 20
 
 MIN_SLUG_LENGTH = 3
-MAX_SLUG_LENGTH = 64
+MAX_SLUG_LENGTH = limits.SLUG_MAX
 
 # Slugs that may never name a room, so a permanent room cannot shadow a page
 # and the router's own routes keep priority over /:slug.

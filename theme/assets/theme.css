@@ -12,6 +12,7 @@
   --iris-on-surface: %color:On Surface%;
   --iris-muted: %color:Muted%;
   --iris-outline: %color:Outline%;
+  --iris-control-border: %color:Control Border%;
 
   --iris-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --iris-font-size-body: 1rem;
@@ -35,6 +36,16 @@ body {
 
 a {
   color: var(--iris-primary);
+}
+
+/* One focus ring for every control. */
+a:focus-visible,
+.iris-button:focus-visible,
+.iris-input:focus-visible,
+.iris-link:focus-visible,
+.iris-footer-link:focus-visible {
+  outline: 3px solid var(--iris-primary);
+  outline-offset: 2px;
 }
 
 .iris-page {
@@ -78,7 +89,7 @@ a {
   width: 100%;
   margin-top: var(--iris-space-2);
   padding: var(--iris-space-2);
-  border: 1px solid var(--iris-outline);
+  border: 1px solid var(--iris-control-border);
   border-radius: var(--iris-radius);
   background: var(--iris-background);
   color: var(--iris-on-surface);
@@ -131,18 +142,12 @@ a {
 
 .iris-button {
   padding: var(--iris-space-2) var(--iris-space-4);
-  border: 1px solid var(--iris-outline);
+  border: 1px solid var(--iris-control-border);
   border-radius: var(--iris-radius);
   background: var(--iris-surface);
   color: var(--iris-on-surface);
   font: inherit;
   cursor: pointer;
-}
-
-.iris-button:focus-visible,
-.iris-input:focus-visible {
-  outline: 3px solid var(--iris-primary);
-  outline-offset: 2px;
 }
 
 .iris-button-primary {
@@ -162,11 +167,6 @@ a {
   cursor: pointer;
 }
 
-.iris-link:focus-visible {
-  outline: 3px solid var(--iris-primary);
-  outline-offset: 2px;
-}
-
 /* The small credit line at the foot of the join page. */
 .iris-footer {
   margin: var(--iris-space-4) 0 0;
@@ -182,11 +182,6 @@ a {
 .iris-footer-link {
   color: inherit;
   text-decoration: underline;
-}
-
-.iris-footer-link:focus-visible {
-  outline: 3px solid var(--iris-primary);
-  outline-offset: 2px;
 }
 
 /* An error is carried by its wording and weight, not by colour alone. */
@@ -273,4 +268,45 @@ a {
 .iris-room-edit .iris-button,
 .iris-confirm .iris-button {
   margin: 0 var(--iris-space-2) var(--iris-space-2) 0;
+}
+
+/* Narrow screens: tighter padding, full-width buttons, and the form choices stack. */
+@media (max-width: 30rem) {
+  .iris-page {
+    padding: var(--iris-space-4) var(--iris-space-2);
+  }
+
+  .iris-card {
+    padding: var(--iris-space-4);
+  }
+
+  .iris-heading {
+    font-size: 1.5rem;
+  }
+
+  .iris-button {
+    width: 100%;
+  }
+
+  .iris-room-actions .iris-button,
+  .iris-room-edit .iris-button,
+  .iris-confirm .iris-button {
+    width: auto;
+  }
+
+  .iris-choice-option {
+    display: block;
+    margin-right: 0;
+  }
+}
+
+/* Nothing animates today. This keeps it so if a transition is added later. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -14,6 +14,8 @@ from iris.services import passphrase, slugs, vdo  # pyright: ignore[reportAttrib
 # puts them in the fragment and False in the query string. A unit test pins the value.
 JOIN_IN_FRAGMENT = True
 
+# Equals limits.DISPLAY_NAME_MAX. This module may import only passphrase, slugs and
+# vdo (a unit test pins that), so tests/unit/test_limits.py keeps the two equal.
 NAME_MAX = 60
 NAME_REQUIRED_MESSAGE = "Enter your name to join."
 
@@ -31,7 +33,7 @@ def clean_display_name(text):
     """The typed name, trimmed and safe to put in an address, or ValueError.
 
     Control characters become spaces, runs of whitespace collapse to one space,
-    and the result is cut to 60 characters. An empty result raises ValueError.
+    and the result is cut to `NAME_MAX` characters. An empty result raises ValueError.
     """
     if not isinstance(text, str):
         raise ValueError(NAME_REQUIRED_MESSAGE)

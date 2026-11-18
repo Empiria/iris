@@ -3,14 +3,14 @@
 
 import anvil.server
 
-from iris.services import permissions  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import limits, permissions  # pyright: ignore[reportAttributeAccessIssue]
 from iris.services.model.room import Room
 
-MAX_TITLE_LENGTH = 80
+MAX_TITLE_LENGTH = limits.TITLE_MAX
 
 
 def clean_title(text):
-    """A meeting name safe to store: text, no control characters, at most 80 long."""
+    """A meeting name safe to store: text, no control characters, cut to the limit."""
     if text is None:
         return ""
     if not isinstance(text, str):

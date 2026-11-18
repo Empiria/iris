@@ -4,7 +4,7 @@
 import anvil.server
 from anvil.tables import app_tables
 
-from iris.services import permissions, vdo  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import limits, permissions, vdo  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class Setting(app_tables.setting.Row, buffered=True, attrs=True):
@@ -16,7 +16,7 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
 
     # Upper bound on a profile admin may save. It stops an absurd paste being
     # stored, and is checked before any validation work.
-    MAX_PROFILE_LENGTH = 2000
+    MAX_PROFILE_LENGTH = limits.PROFILE_MAX
 
     @anvil.server.server_method
     @classmethod

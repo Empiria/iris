@@ -17,6 +17,8 @@ dev = [
     # newer wheel would want a build that `playwright install` can't fetch there.
     "playwright==1.65.2",
     "pyyaml>=6.0",
+    # Bundles axe-core, so the accessibility e2e test needs no network.
+    "axe-playwright-python>=0.1.7",
     # Exact pin so CI and every checkout lint and format alike. Keep it equal to the
     # rev in .pre-commit-config.yaml. anvil-pyright is an npm package, pinned in
     # .github/workflows/ci.yml, not a Python one.

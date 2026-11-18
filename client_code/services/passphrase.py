@@ -13,13 +13,12 @@ with different case, dashes or spaces reduces to the same string. Change the
 vector only on purpose, and re-check every stored verifier when you do.
 """
 
-from iris.services import slugs  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import limits, slugs  # pyright: ignore[reportAttributeAccessIssue]
 
 PASSPHRASE_LENGTH = 12
 GROUP = 4
-# Longest raw input `normalise` accepts. It bounds the work a hostile caller can
-# hand the server's key derivation.
-MAX_INPUT = 200
+# Longest raw input `normalise` accepts (see limits.py).
+MAX_INPUT = limits.PASSPHRASE_INPUT_MAX
 
 
 def generate():

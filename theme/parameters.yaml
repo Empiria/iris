@@ -7,4 +7,5 @@ color_scheme:
   - {color: '#1b1d21', name: On Surface}
   - {color: '#5c6370', name: Muted}
   - {color: '#d7dbe1', name: Outline}
+  - {color: '#767b86', name: Control Border}
 roles: []
