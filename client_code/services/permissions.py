@@ -6,7 +6,17 @@ any browser, so a method that writes authorises inside its own body.
 """
 
 import anvil.server
-import anvil.users
+import anvil.users  # pyright: ignore[reportMissingImports]  # the Users service arrives with plan 02-03
+
+
+class StaffOnly(Exception):
+    """Fallback if the runtime has no anvil.server.PermissionDenied."""
+
+
+# A failed `require_user` raises anvil.server.PermissionDenied, and so does
+# `require_staff`, so a client catches one exception for both. The stubs that
+# `anvil validate` and `just check` bundle omit it, so it is reached by name.
+PermissionDenied = getattr(anvil.server, "PermissionDenied", StaffOnly)
 
 
 def is_staff(user):
@@ -20,5 +30,5 @@ def require_staff():
     """Return the signed-in staff user, or raise PermissionDenied."""
     user = anvil.users.get_user()
     if not is_staff(user):
-        raise anvil.server.PermissionDenied("Staff only")
+        raise PermissionDenied("Staff only")
     return user

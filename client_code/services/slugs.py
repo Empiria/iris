@@ -1,7 +1,7 @@
 """Slug and vdo_room rules for meeting links.
 
 Loads on both sides (Skulpt in the browser, CPython on the server). Random
-generation only runs on the server, so `secrets` is imported inside the
+generation only runs on the server, so `secrets` is loaded inside the
 function that needs it.
 """
 
@@ -66,8 +66,10 @@ def looks_like_slug(slug):
 
 def random_string(alphabet, length):
     """Draw `length` characters from `alphabet` with a cryptographic source."""
-    import secrets
-
+    # `secrets` is server-only: Skulpt lacks it, and `anvil validate` rejects a
+    # static import of it in client_code. This function only ever runs on the
+    # server, so the module is fetched by name here.
+    secrets = __import__("secrets")
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 

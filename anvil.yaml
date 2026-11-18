@@ -1,4 +1,42 @@
 allow_embedding: false
+db_schema:
+  room:
+    client: none
+    server: full
+    columns:
+    - name: slug
+      admin_ui: {width: 200, order: 0}
+      type: string
+    - name: vdo_room
+      admin_ui: {width: 200, order: 1}
+      type: string
+    - name: title
+      admin_ui: {width: 200, order: 2}
+      type: string
+    - name: kind
+      admin_ui: {width: 200, order: 3}
+      type: string
+    - name: active
+      admin_ui: {width: 200, order: 4}
+      type: bool
+    - name: created_by
+      admin_ui: {width: 200, order: 5}
+      type: string
+    - name: created
+      admin_ui: {width: 200, order: 6}
+      type: datetime
+    title: room
+  setting:
+    client: none
+    server: full
+    columns:
+    - name: key
+      admin_ui: {width: 200, order: 0}
+      type: string
+    - name: value
+      admin_ui: {width: 200, order: 1}
+      type: string
+    title: setting
 dependencies:
 - dep_id: dep_kdiw29fnbu4q
   resolution_hints: {app_id: 3PIDO5P3H4VPEMPL, name: routing, package_name: routing}
