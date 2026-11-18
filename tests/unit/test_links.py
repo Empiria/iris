@@ -2,19 +2,14 @@
 # Copyright (c) 2026 Empiria
 
 import ast
-import re
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-RESULTS = (
-    ROOT
-    / ".planning"
-    / "phases"
-    / "02-one-off-meetings-admin-to-client"
-    / "02-SPIKE-RESULTS.md"
-)
+# The route owner Iris ships with. Changing it changes every meeting link, so this
+# test makes that a deliberate edit.
+PINNED_ROUTE_OWNER = "runtime"
 
 
 @pytest.fixture
@@ -101,12 +96,8 @@ def test_route_owner_is_an_allowed_value(links):
     assert links.ROUTE_OWNER in ("runtime", "own", "query")
 
 
-def test_route_owner_matches_the_recorded_decision(links):
-    if not RESULTS.exists():
-        pytest.skip("02-SPIKE-RESULTS.md is not present in this checkout")
-    match = re.search(r"^Route owner:\s*(\S+)\s*$", RESULTS.read_text("utf-8"), re.M)
-    assert match, "no 'Route owner:' line in 02-SPIKE-RESULTS.md"
-    assert match.group(1) == links.ROUTE_OWNER
+def test_route_owner_matches_the_pinned_value(links):
+    assert links.ROUTE_OWNER == PINNED_ROUTE_OWNER
 
 
 def test_links_module_is_client_safe():

@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""Browser classification and the iframe-or-redirect hand-off (JOIN-07).
+"""Browser classification and the iframe-or-redirect hand-off.
 
-`handoff.py` applies the recorded decision in 02-SPIKE-RESULTS.md. These tests
-pin the closed browser vocabulary, the truth table of `choose`, and that the two
-constants in the module agree with the Decisions lines.
+`handoff.py` applies a fixed iframe decision. These tests pin the closed
+browser vocabulary, the truth table of `choose`, and that the two constants in
+the module agree with the values pinned here.
 """
 
 import re
@@ -14,13 +14,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-RESULTS = (
-    ROOT
-    / ".planning"
-    / "phases"
-    / "02-one-off-meetings-admin-to-client"
-    / "02-SPIKE-RESULTS.md"
-)
+# The hand-off Iris ships with. Pinned so a change is a deliberate edit.
+PINNED_MODE = "iframe-except"
+PINNED_REDIRECT_BROWSERS = "safari-ios, in-app"
 HANDOFF_SOURCE = ROOT / "client_code" / "services" / "handoff.py"
 
 WINDOWS_CHROME = (
@@ -281,32 +277,23 @@ def test_the_listed_iphone_is_sent_to_the_redirect(handoff, monkeypatch):
     assert handoff.method_for(IPHONE_SAFARI) == "redirect"
 
 
-# --- the recorded decision --------------------------------------------------
+# --- the pinned decision --------------------------------------------------
 
 
-def _decision_line(label):
-    if not RESULTS.exists():
-        pytest.skip("02-SPIKE-RESULTS.md is not available in this checkout")
-    for line in RESULTS.read_text(encoding="utf-8").splitlines():
-        if line.startswith(label):
-            return line[len(label) :].strip()
-    pytest.fail(f"no {label!r} line in {RESULTS.name}")
-
-
-def test_handoff_mode_equals_the_decision(handoff):
-    recorded = _decision_line("Iframe hand-off:")
+def test_handoff_mode_equals_the_pinned_value(handoff):
+    recorded = PINNED_MODE
     mode = handoff.HANDOFF_MODE
     assert mode in MODES
     assert mode == recorded
 
 
-def test_redirect_browsers_equal_the_decision(handoff):
-    recorded = _decision_line("Redirect browsers:")
+def test_redirect_browsers_equal_the_pinned_value(handoff):
+    recorded = PINNED_REDIRECT_BROWSERS
     words = [] if recorded.lower() == "none" else recorded.split(",")
     words = [word.strip().lower() for word in words if word.strip()]
     outside = [word for word in words if word not in ALLOWED_TOKENS]
     assert not outside, (
-        "Redirect browsers line uses words outside the closed vocabulary: stop and"
+        "Pinned redirect list uses words outside the closed vocabulary: stop and"
         f" ask the lead. Words: {outside}"
     )
     assert isinstance(handoff.REDIRECT_BROWSERS_TEXT, str)

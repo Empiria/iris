@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-"""Join logic: names, slugs, lookup states and the join address (JOIN-01, 04, 06)."""
+"""Join logic: names, slugs, lookup states and the join address ."""
 
 import ast
 import re
@@ -10,13 +10,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-RESULTS = (
-    ROOT
-    / ".planning"
-    / "phases"
-    / "02-one-off-meetings-admin-to-client"
-    / "02-SPIKE-RESULTS.md"
-)
+# Whether the join address carries room, label and salt after the "#". Pinned so a
+# change is a deliberate edit.
+PINNED_JOIN_IN_FRAGMENT = True
 # Test data only: not a code default.
 PROFILE = "ssq=-1&sharperscreen&rbr=50000&trb=50000&crb&codec=av1,vp9,vp8,h264&q=0"
 VDO_ROOM = "kdvx2p8wmq5rt7hzn3cj"
@@ -206,26 +202,12 @@ def test_any_other_address_is_refused(join, url):
     assert join.is_http_url(url) is False
 
 
-# --- the recorded decision ------------------------------------------------
+# --- the pinned decision ------------------------------------------------
 
 
-def test_join_in_fragment_matches_the_recorded_decision(join):
-    if not RESULTS.is_file():
-        pytest.skip("02-SPIKE-RESULTS.md is not on this machine")
-    line = next(
-        (
-            row
-            for row in RESULTS.read_text(encoding="utf-8").splitlines()
-            if row.startswith("Join URL parameters:")
-        ),
-        None,
-    )
-    if line is None:
-        pytest.skip("02-SPIKE-RESULTS.md has no 'Join URL parameters:' line")
-
+def test_join_in_fragment_matches_the_pinned_value(join):
     assert isinstance(join.JOIN_IN_FRAGMENT, bool)
-    wants_fragment = line.split(":", 1)[1].strip() == "fragment"
-    assert wants_fragment == join.JOIN_IN_FRAGMENT
+    assert join.JOIN_IN_FRAGMENT == PINNED_JOIN_IN_FRAGMENT
 
 
 # --- structure ------------------------------------------------------------
