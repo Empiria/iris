@@ -64,6 +64,48 @@ def looks_like_slug(slug):
     return slug not in RESERVED_SLUGS
 
 
+def clean_room_slug(text):
+    """Turn a staff-typed room name into a readable slug, or raise ValueError.
+
+    The text is trimmed and lower-cased, and each run of spaces or underscores
+    becomes one "-". The messages are written for the staff member who typed the
+    name. Uniqueness is not checked here: it needs the table, so the room model
+    does it.
+    """
+    name = normalise(text)
+    out = []
+    in_gap = False
+    for ch in name:
+        if ch == "_" or ch.isspace():
+            in_gap = True
+            continue
+        if in_gap:
+            out.append("-")
+            in_gap = False
+        out.append(ch)
+    if in_gap:
+        # Trailing whitespace was already trimmed, so this only fires for a
+        # trailing "_"; keep it visible so the dash check below refuses it.
+        out.append("-")
+    slug = "".join(out)
+
+    if len(slug) < MIN_SLUG_LENGTH:
+        raise ValueError(
+            "Use at least " + str(MIN_SLUG_LENGTH) + " characters for the name."
+        )
+    if len(slug) > MAX_SLUG_LENGTH:
+        raise ValueError(
+            "Use at most " + str(MAX_SLUG_LENGTH) + " characters for the name."
+        )
+    if any(ch not in _SLUG_CHARS for ch in slug):
+        raise ValueError("Use only letters, numbers and dashes in the name.")
+    if slug.startswith("-") or slug.endswith("-"):
+        raise ValueError("The name can't start or end with a dash.")
+    if slug in RESERVED_SLUGS:
+        raise ValueError("That name is reserved.")
+    return slug
+
+
 def random_string(alphabet, length):
     """Draw `length` characters from `alphabet` with a cryptographic source."""
     # `secrets` is server-only: Skulpt lacks it, and `anvil validate` rejects a
