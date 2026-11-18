@@ -35,7 +35,14 @@ import yaml
 
 IMAGE = "iris-anvil-dev"
 DEFAULT_PORT = 3031
-APP_ITEMS = ("anvil.yaml", "client_code", "server_code", "theme", "requirements.txt")
+APP_ITEMS = (
+    "anvil.yaml",
+    "client_code",
+    "server_code",
+    "scripts",
+    "theme",
+    "requirements.txt",
+)
 READY_TRIES = 60
 READY_PAUSE_S = 2
 
@@ -105,7 +112,14 @@ def package_name(dest: Path) -> str:
     return str(name)
 
 
-def container_command(name, dest, port, package, dep_args) -> list:
+def container_command(
+    name, dest, port, package, dep_args, env=None, server_args=None
+) -> list:
+    """The podman run command. env goes to the container as -e, server_args to
+    anvil-app-server after the standard flags (a spike's own settings)."""
+    env_args = []
+    for key, value in (env or {}).items():
+        env_args += ["-e", f"{key}={value}"]
     return [
         "podman",
         "run",
@@ -113,6 +127,7 @@ def container_command(name, dest, port, package, dep_args) -> list:
         "--rm",
         "--name",
         name,
+        *env_args,
         "-p",
         f"127.0.0.1:{port}:3030",
         "-v",
@@ -130,6 +145,7 @@ def container_command(name, dest, port, package, dep_args) -> list:
         "--port",
         "3030",
         *dep_args,
+        *(server_args or []),
     ]
 
 
@@ -239,7 +255,17 @@ def _run_one(repo, name, variant, assemble_only, with_stack, env) -> list:
     container = spike_container(repo, env)
     port = spike_port(env)
     _podman("rm", "-f", "--time", "0", container)
-    cmd = container_command(container, dest, port, package_name(dest), _dep_args(repo))
+    options = getattr(probe, "container_options", None)
+    env_vars, server_args = options(variant) if options else ({}, [])
+    cmd = container_command(
+        container,
+        dest,
+        port,
+        package_name(dest),
+        _dep_args(repo),
+        env=env_vars,
+        server_args=server_args,
+    )
     started = _podman(*cmd[1:])
     if started.returncode != 0:
         return [(name, "FAIL", f"podman run failed: {started.stderr.strip()[:300]}")]
@@ -247,6 +273,8 @@ def _run_one(repo, name, variant, assemble_only, with_stack, env) -> list:
         if not _wait_ready(port):
             return [(name, "FAIL", f"no 200 from localhost:{port} after boot wait")]
         base = f"http://localhost:{port}/"
+        # A probe that needs the container's log asks for it by this name.
+        os.environ["IRIS_SPIKE_ACTIVE_CONTAINER"] = container
         if variant:
             return list(probe.run(base, variant))
         return list(probe.run(base))

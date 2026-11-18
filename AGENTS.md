@@ -98,7 +98,7 @@ Iris builds its UI from HTML form templates and HTML components. **Don't use Mat
 - `just stubs` is a note only: anvil-pyright bundles the Anvil stubs, so never wire in a `.stubs/` directory.
 - `just lint` runs ruff with Empiria's rule set from `.ruff.toml`. In `client_code/`, reject autofixes that bring in subscripted generics or `contextlib.suppress`: Skulpt can't run the generics, and `contextlib.suppress` is unverified there. `just format` formats.
 - `just check` type-checks with `anvil-pyright`, not plain basedpyright.
-- `just validate` runs `anvil validate .`.
+- `just validate` runs `anvil validate` on `anvil.yaml`, `client_code`, `server_code` and `theme`, one path at a time. It skips `tools/`, because the spike overlays under `tools/spikes/` hold forms that are only valid once laid into a spike copy of the app.
 - `just leftovers` checks that nothing from the starter has come back. It also applies any extra patterns in the optional untracked `.leftovers-local` file. `just setup` lists that file in the git exclude file, and it is never committed.
 - `just verify` runs lint, check, validate and leftovers. It is the gate before handing off.
 - `just unit` runs the hermetic server-side tests.

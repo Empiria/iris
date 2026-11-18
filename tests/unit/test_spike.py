@@ -87,6 +87,11 @@ class TestAssemble:
             "theme",
         ]
 
+    def test_scripts_are_copied_when_the_app_has_them(self, spike, repo, dest):
+        write(repo / "scripts" / "CreateStaff.py", "script")
+        spike.assemble(repo, repo / "tools" / "spikes" / "demo", dest)
+        assert (dest / "scripts" / "CreateStaff.py").read_text() == "script"
+
     def test_no_bytecode_is_copied(self, spike, repo, dest):
         spike.assemble(repo, repo / "tools" / "spikes" / "demo", dest)
         assert not list(dest.rglob("*.pyc"))
@@ -231,6 +236,20 @@ class TestContainerCommand:
             "dep_a=routing",
         ]
 
+    def test_env_goes_before_the_image_as_dash_e(self, spike, dest):
+        cmd = self.command(spike, dest, env={"IRIS_STAFF_PASSWORD": "x y"})
+        i = cmd.index("-e")
+        assert cmd[i + 1] == "IRIS_STAFF_PASSWORD=x y"
+        assert i < cmd.index("iris-anvil-dev")
+
+    def test_no_env_adds_no_dash_e(self, spike, dest):
+        assert "-e" not in self.command(spike, dest)
+
+    def test_server_args_go_last(self, spike, dest):
+        cmd = self.command(spike, dest, server_args=["--secret", "a=b"])
+        assert cmd[-2:] == ["--secret", "a=b"]
+        assert cmd.index("--dep-id") < cmd.index("--secret")
+
     def test_package_drives_the_mount_and_app(self, spike, dest):
         cmd = self.command(spike, dest, package="other")
         assert f"{dest}:/srv/other:ro,z" in cmd
@@ -314,6 +333,7 @@ EXPECTED = {
     "route_own",
     "schema_users",
     "iframe_matrix",
+    "staff_script",
 }
 
 
