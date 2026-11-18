@@ -74,10 +74,15 @@ def _normalise_input(passphrase_text):
 
 
 def _store_attempts(row, failed, locked_until):
-    """Save the failed-unlock count and the lock time on a room row."""
+    """Write the failed-unlock count and the lock time on a room row.
+
+    This runs inside a transaction, where `save()` on a buffered row fails: the
+    save is itself a transaction and Anvil does not nest them. So the row is
+    switched to write-through first, and `update()` then writes at once.
+    """
     changes = {"failed_unlocks": failed, "locked_until": locked_until}
+    row.buffer_changes(False)
     row.update(**changes)
-    row.save()
 
 
 def _reserve_attempt(slug):

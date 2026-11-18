@@ -46,8 +46,15 @@ class FakeRow:
     def get(self, column, default=None):
         return self._values.get(column, default)
 
+    def buffer_changes(self, buffered=None):
+        """`buffer_changes(False)` makes `update()` write at once, as Anvil does."""
+        if buffered is False:
+            object.__setattr__(self, "write_through", True)
+
     def update(self, **values):
         self._values.update(values)
+        if self.__dict__.get("write_through"):
+            object.__setattr__(self, "saves", self.saves + 1)
 
     def save(self):
         object.__setattr__(self, "saves", self.saves + 1)

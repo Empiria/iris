@@ -689,6 +689,21 @@ def test_overlapping_guesses_cannot_exceed_the_limit(
     assert tables.room.rows[0]["failed_unlocks"] == 10
 
 
+def test_attempt_counts_are_written_through_not_saved(load_client_module):
+    """Inside a transaction `save()` is itself a transaction, which Anvil refuses
+    to nest, so the counts must be written by a write-through `update()`."""
+    from fakes import FakeRow
+
+    module = load_client_module("services/model/room")
+    row = FakeRow({"failed_unlocks": 0, "locked_until": None})
+
+    module._store_attempts(row, 3, None)
+
+    assert row["failed_unlocks"] == 3
+    assert row.saves == 1
+    assert row.__dict__.get("write_through") is True
+
+
 def test_a_write_conflict_is_retried_and_counts_the_guess_once(
     Room, tables, admin, as_user, fast_kdf, clock, load_client_module, monkeypatch
 ):
