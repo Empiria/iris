@@ -1,0 +1,30 @@
+---
+custom_component: true
+events:
+  - name: copied
+properties:
+  - name: label
+    type: string
+    default_value: ""
+  - name: button_text
+    type: string
+    default_value: Copy
+  - name: copied_text
+    type: string
+    default_value: Copied.
+  - name: failed_text
+    type: string
+    default_value: Copy failed. It is selected, so press Ctrl+C or Cmd+C.
+  - name: secret
+    type: boolean
+    default_value: false
+---
+<div class="iris-copy-field">
+  <label class="iris-field"><span anvil:dom-node="label"></span>
+    <input class="iris-input" type="text" readonly autocomplete="off"
+           spellcheck="false" anvil:dom-node="output">
+  </label>
+  <button type="button" class="iris-button" anvil:dom-node="copy_button"
+          anvil:on-dom:click="self._on_copy"></button>
+  <anvil-component name="result" type="form:Message"></anvil-component>
+</div>

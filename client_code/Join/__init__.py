@@ -38,12 +38,13 @@ class Join(JoinTemplate):
         return join.load_meeting(slug, anvil.server.call)
 
     def _show_only(self, card):
-        for name in ("loading_card", "join_card", "missing_card", "error_card"):
-            self.dom_nodes[name].hidden = name != card
+        self.dom_nodes["join_card"].hidden = card != "join_card"
+        for name in ("loading_card", "missing_card", "error_card"):
+            getattr(self, name).visible = name == card
 
     def _show_locked(self, locked):
         self.locked = locked
-        self.dom_nodes["passphrase_field"].hidden = not locked
+        self.passphrase_input.visible = locked
         self.dom_nodes["join_lede"].textContent = LOCKED_LEDE if locked else READY_LEDE
 
     def form_show(self, **event_args):
@@ -67,9 +68,7 @@ class Join(JoinTemplate):
             self._show_only("error_card")
 
     def _show_message(self, text):
-        message = self.dom_nodes["join_message"]
-        message.textContent = text
-        message.hidden = text == ""
+        self.join_message.show(text)
 
     def _unlock(self):
         """Send the typed passphrase and return the room's details, or None.
@@ -78,8 +77,8 @@ class Join(JoinTemplate):
         in the page only for as long as the person is typing it. A refusal shows
         its fixed message and puts the cursor back in the field.
         """
-        field = self.dom_nodes["passphrase_input"]
-        result = join.unlock(self.slug, str(field.value or ""), anvil.server.call)
+        field = self.passphrase_input
+        result = join.unlock(self.slug, field.value, anvil.server.call)
         field.value = ""
         state = result["state"]
         if state == "ready":
@@ -92,9 +91,7 @@ class Join(JoinTemplate):
         event.preventDefault()
         self._show_message("")
         try:
-            name = join.clean_display_name(
-                str(self.dom_nodes["name_input"].value or "")
-            )
+            name = join.clean_display_name(self.name_input.value)
         except ValueError as error:
             self._show_message(str(error))
             return

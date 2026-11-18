@@ -5,11 +5,10 @@ custom_component: true
   <button type="button" class="iris-link" anvil:dom-node="open_button"
           anvil:on-dom:click="self._on_open">Forgot password?</button>
   <form anvil:dom-node="reset_form" anvil:on-dom:submit="self._on_submit" hidden>
-    <label class="iris-field">Email
-      <input class="iris-input" type="email" autocomplete="username"
-             anvil:dom-node="reset_email">
-    </label>
-    <p class="iris-message" role="status" anvil:dom-node="reset_message" hidden></p>
+    <anvil-component name="reset_email" type="form:TextField"
+                     prop:label="Email" prop:input_type="email"
+                     prop:autocomplete="username"></anvil-component>
+    <anvil-component name="reset_message" type="form:Message"></anvil-component>
     <button type="submit" class="iris-button" anvil:dom-node="reset_button">Send reset link</button>
   </form>
 </div>

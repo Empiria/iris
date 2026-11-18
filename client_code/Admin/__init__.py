@@ -25,6 +25,7 @@ class Admin(AdminTemplate):
 
     def __init__(self, **properties):
         self.init_components(**properties)
+        self.room_name_input.visible = False
         self._profile_loaded = False
         self._rooms_loaded = False
         self.rooms_panel.add_event_handler("x-edit", self._on_row_edit)
@@ -46,7 +47,7 @@ class Admin(AdminTemplate):
         # Reads the signal, so it runs again whenever the sign-in state changes.
         known = admin_session.is_known()
         is_admin = admin_session.is_admin()
-        self.dom_nodes["loading_card"].hidden = known
+        self.loading_card.visible = not known
         self.dom_nodes["signin_card"].hidden = (not known) or is_admin
         self.dom_nodes["signed_in_card"].hidden = not is_admin
         if is_admin:
@@ -70,14 +71,12 @@ class Admin(AdminTemplate):
             self._clear_rooms()
 
     def _show_message(self, text):
-        message = self.dom_nodes["signin_message"]
-        message.textContent = text
-        message.hidden = text == ""
+        self.signin_message.show(text)
 
     def _on_submit(self, event, **properties):
         event.preventDefault()
-        email = str(self.dom_nodes["email_input"].value or "").strip()
-        password = str(self.dom_nodes["password_input"].value or "")
+        email = self.email_input.value.strip()
+        password = self.password_input.value
         if email == "" or password == "":
             self._show_message("Enter your email and password.")
             return
@@ -89,49 +88,26 @@ class Admin(AdminTemplate):
         except admin_session.SignInError as error:
             self._show_message(str(error))
         finally:
-            self.dom_nodes["password_input"].value = ""
+            self.password_input.value = ""
             button.disabled = False
 
     def _on_sign_out(self, event, **properties):
         admin_session.sign_out()
 
     def _show_create_message(self, text):
-        message = self.dom_nodes["create_message"]
-        message.textContent = text
-        message.hidden = text == ""
-
-    def _show_copy_message(self, text):
-        message = self.dom_nodes["copy_message"]
-        message.textContent = text
-        message.hidden = text == ""
-
-    def _copy_link(self):
-        """Copy the link to the clipboard, or select it and say what to press."""
-        output = self.dom_nodes["link_output"]
-        try:
-            window.navigator.clipboard.writeText(str(output.value))
-        except Exception:
-            output.select()
-            self._show_copy_message(
-                "Copy failed. The link is selected, so press Ctrl+C or Cmd+C."
-            )
-        else:
-            self._show_copy_message("Link copied.")
+        self.create_message.show(text)
 
     def _clear_passphrase(self):
         """Empty the passphrase box and hide it, so it never outlives its room."""
-        self.dom_nodes["passphrase_output"].value = ""
+        self.passphrase_field.clear()
         self.dom_nodes["passphrase_box"].hidden = True
-        message = self.dom_nodes["passphrase_copy_message"]
-        message.textContent = ""
-        message.hidden = True
 
     def _wants_permanent(self):
         return bool(self.dom_nodes["kind_permanent"].checked)
 
     def _on_kind_change(self, event, **properties):
         permanent = self._wants_permanent()
-        self.dom_nodes["room_name_field"].hidden = not permanent
+        self.room_name_input.visible = permanent
         self.dom_nodes["create_button"].textContent = (
             "Create room" if permanent else "Create link"
         )
@@ -140,7 +116,7 @@ class Admin(AdminTemplate):
     def _create(self, permanent, title):
         """Make the room on the server and return its reply."""
         if permanent:
-            name = str(self.dom_nodes["room_name_input"].value or "")
+            name = self.room_name_input.value
             return anvil.server.call("create_permanent_room", name, title)
         return anvil.server.call("create_one_off_link", title)
 
@@ -149,18 +125,18 @@ class Admin(AdminTemplate):
             window.location.origin, window.location.pathname
         )
         link = links.link_for(base, result["slug"], links.ROUTE_OWNER)
-        self.dom_nodes["link_output"].value = link
+        self.link_field.value = link
         if permanent:
-            self.dom_nodes["passphrase_output"].value = str(result["passphrase"])
+            self.passphrase_field.value = str(result["passphrase"])
             self.dom_nodes["passphrase_box"].hidden = False
         self.dom_nodes["result_box"].hidden = False
-        self._copy_link()
+        self.link_field.copy()
 
     def _on_create(self, event, **properties):
         permanent = self._wants_permanent()
-        title = str(self.dom_nodes["title_input"].value or "")
+        title = self.title_input.value
         self._show_create_message("")
-        self._show_copy_message("")
+        self.link_field.result.clear()
         self._clear_passphrase()
         button = self.dom_nodes["create_button"]
         button.disabled = True
@@ -184,27 +160,8 @@ class Admin(AdminTemplate):
         finally:
             button.disabled = False
 
-    def _on_copy(self, event, **properties):
-        self._show_copy_message("")
-        self._copy_link()
-
-    def _on_copy_passphrase(self, event, **properties):
-        """Copy the passphrase, or select it and say what to press."""
-        output = self.dom_nodes["passphrase_output"]
-        message = self.dom_nodes["passphrase_copy_message"]
-        try:
-            window.navigator.clipboard.writeText(str(output.value))
-            text = "Passphrase copied."
-        except Exception:
-            output.select()
-            text = "Copy failed. The passphrase is selected, so press Ctrl+C or Cmd+C."
-        message.textContent = text
-        message.hidden = False
-
     def _show_profile_message(self, text):
-        message = self.dom_nodes["profile_message"]
-        message.textContent = text
-        message.hidden = text == ""
+        self.profile_message.show(text)
 
     def _set_profile_enabled(self, enabled):
         self.dom_nodes["profile_input"].disabled = not enabled
@@ -244,9 +201,7 @@ class Admin(AdminTemplate):
             button.disabled = False
 
     def _show_rooms_message(self, text):
-        message = self.dom_nodes["rooms_message"]
-        message.textContent = text
-        message.hidden = text == ""
+        self.rooms_message.show(text)
 
     def _clear_rooms(self):
         """Drop the list and any passphrase from the page, when signed out."""
@@ -305,9 +260,9 @@ class Admin(AdminTemplate):
             window.location.origin, window.location.pathname
         )
         link = links.link_for(base, result["slug"], links.ROUTE_OWNER)
-        self.dom_nodes["link_output"].value = link
-        self._show_copy_message("")
-        self.dom_nodes["passphrase_output"].value = str(result["passphrase"])
+        self.link_field.value = link
+        self.link_field.result.clear()
+        self.passphrase_field.value = str(result["passphrase"])
         self.dom_nodes["passphrase_box"].hidden = False
         self.dom_nodes["result_box"].hidden = False
         self._show_rooms_message(

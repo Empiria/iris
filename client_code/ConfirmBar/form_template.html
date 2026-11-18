@@ -1,0 +1,14 @@
+---
+custom_component: true
+events:
+  - name: confirm
+  - name: cancel
+---
+<div class="iris-confirm">
+  <p class="iris-message" role="alert" anvil:dom-node="text"></p>
+  <button type="button" class="iris-button iris-button-primary"
+          anvil:dom-node="confirm_button"
+          anvil:on-dom:click="self._on_confirm"></button>
+  <button type="button" class="iris-button" anvil:dom-node="cancel_button"
+          anvil:on-dom:click="self._on_cancel">Keep it</button>
+</div>

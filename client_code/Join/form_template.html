@@ -1,34 +1,28 @@
 <div>
 <main class="iris-page" anvil:dom-node="join_main">
-  <section class="iris-card" anvil:dom-node="loading_card">
-    <p class="iris-lede">Opening your meeting</p>
-  </section>
+  <anvil-component name="loading_card" type="form:StatusCard"
+                   prop:text="Opening your meeting"></anvil-component>
   <section class="iris-card" anvil:dom-node="join_card" hidden>
     <h1 class="iris-heading" anvil:dom-node="meeting_title"></h1>
     <p class="iris-lede" anvil:dom-node="join_lede">Enter your name to join the meeting.</p>
     <form anvil:dom-node="join_form" anvil:on-dom:submit="self._on_submit">
-      <label class="iris-field" anvil:dom-node="passphrase_field" hidden>Passphrase
-        <input class="iris-input" type="password" autocomplete="off"
-               autocapitalize="off" spellcheck="false" maxlength="200"
-               anvil:dom-node="passphrase_input">
-      </label>
-      <label class="iris-field">Your name
-        <input class="iris-input" type="text" maxlength="60" autocomplete="name"
-               anvil:dom-node="name_input">
-      </label>
-      <p class="iris-message" role="alert" anvil:dom-node="join_message" hidden></p>
+      <anvil-component name="passphrase_input" type="form:TextField"
+                       prop:label="Passphrase" prop:input_type="password"
+                       prop:maxlength="200" prop:private="True"></anvil-component>
+      <anvil-component name="name_input" type="form:TextField"
+                       prop:label="Your name" prop:maxlength="60"
+                       prop:autocomplete="name"></anvil-component>
+      <anvil-component name="join_message" type="form:Message" prop:level="alert"></anvil-component>
       <button type="submit" class="iris-button iris-button-primary"
               anvil:dom-node="join_button">Join meeting</button>
     </form>
   </section>
-  <section class="iris-card" anvil:dom-node="missing_card" hidden>
-    <h1 class="iris-heading">No such meeting</h1>
-    <p class="iris-lede">This link does not match a meeting. Check the link you were sent, or ask your host for a new one.</p>
-  </section>
-  <section class="iris-card" anvil:dom-node="error_card" hidden>
-    <h1 class="iris-heading">Could not open the meeting</h1>
-    <p class="iris-lede">Try again in a moment, or ask your host for help.</p>
-  </section>
+  <anvil-component name="missing_card" type="form:StatusCard"
+                   prop:heading="No such meeting"
+                   prop:text="This link does not match a meeting. Check the link you were sent, or ask your host for a new one."></anvil-component>
+  <anvil-component name="error_card" type="form:StatusCard"
+                   prop:heading="Could not open the meeting"
+                   prop:text="Try again in a moment, or ask your host for help."></anvil-component>
   <footer class="iris-footer" anvil:dom-node="credit">
     <p>Powered by <a class="iris-footer-link" href="https://vdo.ninja" target="_blank" rel="noopener">VDO.Ninja</a>. Iris is independent and not affiliated with VDO.Ninja.</p>
   </footer>

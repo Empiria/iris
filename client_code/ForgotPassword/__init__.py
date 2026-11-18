@@ -18,14 +18,12 @@ class ForgotPassword(ForgotPasswordTemplate):
 
     def _on_submit(self, event, **properties):
         event.preventDefault()
-        message = self.dom_nodes["reset_message"]
         button = self.dom_nodes["reset_button"]
         button.disabled = True
         try:
-            text = password_reset.request_reset(self.dom_nodes["reset_email"].value)
+            text = password_reset.request_reset(self.reset_email.value)
         except Exception:
             text = "Could not send the reset link. Try again later."
         finally:
             button.disabled = False
-        message.textContent = text
-        message.hidden = False
+        self.reset_message.show(text)

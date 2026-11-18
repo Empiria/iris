@@ -3,7 +3,10 @@
 
 from anvil.js import window
 
-from iris.services import links  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import (
+    clipboard,  # pyright: ignore[reportAttributeAccessIssue]
+    links,  # pyright: ignore[reportAttributeAccessIssue]
+)
 
 from ._anvil_designer import RoomRowTemplate
 
@@ -40,6 +43,8 @@ class RoomRow(RoomRowTemplate):
         self.init_components(**properties)
         self._pending = ""
         self.add_event_handler("show", self.form_show)
+        self.confirm_bar.set_event_handler("confirm", self._on_confirm)
+        self.confirm_bar.set_event_handler("cancel", self._on_cancel)
         self._render()
 
     def form_show(self, **event_args):
@@ -86,47 +91,41 @@ class RoomRow(RoomRowTemplate):
             parent.raise_event(name, **event_args)
 
     def _show_message(self, text):
-        message = self.dom_nodes["row_message"]
-        message.textContent = text
-        message.hidden = text == ""
+        self.row_message.show(text)
 
     def _reset(self):
         """Back to the plain row: no edit box, no confirmation."""
         self._pending = ""
         self.dom_nodes["edit_box"].hidden = True
-        self.dom_nodes["confirm_box"].hidden = True
+        self.confirm_bar.dismiss()
         self.dom_nodes["room_actions"].hidden = False
 
     def _ask(self, kind, warning, button_text):
         self._reset()
         self._pending = kind
-        self.dom_nodes["confirm_text"].textContent = warning
-        self.dom_nodes["confirm_button"].textContent = button_text
         self.dom_nodes["room_actions"].hidden = True
-        self.dom_nodes["confirm_box"].hidden = False
+        self.confirm_bar.ask(warning, button_text)
 
     def _on_copy(self, event, **properties):
         link = str(self.dom_nodes["room_link"].textContent or "")
-        try:
-            window.navigator.clipboard.writeText(link)
-        except Exception:
+        if clipboard.copy(link):
+            self._show_message("Link copied.")
+        else:
             self._show_message(
                 "Copy failed. Select the link and press Ctrl+C or Cmd+C."
             )
-        else:
-            self._show_message("Link copied.")
 
     def _on_edit(self, event, **properties):
         self._show_message("")
         self._reset()
-        field = self.dom_nodes["title_input"]
+        field = self.title_input
         field.value = str(self._room().get("title") or "")
         self.dom_nodes["room_actions"].hidden = True
         self.dom_nodes["edit_box"].hidden = False
         field.focus()
 
     def _on_save(self, event, **properties):
-        title = str(self.dom_nodes["title_input"].value or "")
+        title = self.title_input.value
         self._reset()
         self._tell_parent("x-edit", slug=self._slug(), title=title)
 
@@ -138,10 +137,10 @@ class RoomRow(RoomRowTemplate):
         self._show_message("")
         self._ask("delete", DELETE_WARNING, "Delete now")
 
-    def _on_cancel(self, event, **properties):
+    def _on_cancel(self, event=None, **properties):
         self._reset()
 
-    def _on_confirm(self, event, **properties):
+    def _on_confirm(self, event=None, **properties):
         kind = self._pending
         self._reset()
         if kind == "rotate":

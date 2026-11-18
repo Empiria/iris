@@ -1,19 +1,16 @@
 <main class="iris-page">
-  <section class="iris-card" anvil:dom-node="loading_card">
-    <p class="iris-lede">Checking your session</p>
-  </section>
+  <anvil-component name="loading_card" type="form:StatusCard"
+                   prop:text="Checking your session"></anvil-component>
   <section class="iris-card" anvil:dom-node="signin_card" hidden>
     <h1 class="iris-heading">Admin sign-in</h1>
     <form anvil:dom-node="signin_form" anvil:on-dom:submit="self._on_submit">
-      <label class="iris-field">Email
-        <input class="iris-input" type="email" autocomplete="username"
-               anvil:dom-node="email_input">
-      </label>
-      <label class="iris-field">Password
-        <input class="iris-input" type="password" autocomplete="current-password"
-               anvil:dom-node="password_input">
-      </label>
-      <p class="iris-message" role="alert" anvil:dom-node="signin_message" hidden></p>
+      <anvil-component name="email_input" type="form:TextField"
+                       prop:label="Email" prop:input_type="email"
+                       prop:autocomplete="username"></anvil-component>
+      <anvil-component name="password_input" type="form:TextField"
+                       prop:label="Password" prop:input_type="password"
+                       prop:autocomplete="current-password"></anvil-component>
+      <anvil-component name="signin_message" type="form:Message" prop:level="alert"></anvil-component>
       <button type="submit" class="iris-button iris-button-primary"
               anvil:dom-node="signin_button">Sign in</button>
     </form>
@@ -40,36 +37,27 @@
                    anvil:on-dom:change="self._on_kind_change"> Permanent room
           </label>
         </fieldset>
-        <label class="iris-field" anvil:dom-node="room_name_field" hidden>Room name, used in the link
-          <input class="iris-input" type="text" maxlength="64" autocomplete="off"
-                 autocapitalize="off" spellcheck="false"
-                 anvil:dom-node="room_name_input">
-        </label>
-        <label class="iris-field">Meeting name (optional)
-          <input class="iris-input" type="text" maxlength="80"
-                 anvil:dom-node="title_input">
-        </label>
+        <anvil-component name="room_name_input" type="form:TextField"
+                         prop:label="Room name, used in the link"
+                         prop:maxlength="64" prop:private="True"></anvil-component>
+        <anvil-component name="title_input" type="form:TextField"
+                         prop:label="Meeting name (optional)"
+                         prop:maxlength="80"></anvil-component>
         <button type="button" class="iris-button iris-button-primary"
                 anvil:dom-node="create_button"
                 anvil:on-dom:click="self._on_create">Create link</button>
-        <p class="iris-message" role="alert" anvil:dom-node="create_message" hidden></p>
+        <anvil-component name="create_message" type="form:Message" prop:level="alert"></anvil-component>
         <div anvil:dom-node="result_box" hidden>
-          <label class="iris-field">Meeting link
-            <input class="iris-input" type="text" readonly
-                   anvil:dom-node="link_output">
-          </label>
-          <button type="button" class="iris-button" anvil:dom-node="copy_button"
-                  anvil:on-dom:click="self._on_copy">Copy link</button>
-          <p class="iris-message" role="status" anvil:dom-node="copy_message" hidden></p>
+          <anvil-component name="link_field" type="form:CopyField"
+                           prop:label="Meeting link" prop:button_text="Copy link"
+                           prop:copied_text="Link copied."
+                           prop:failed_text="Copy failed. The link is selected, so press Ctrl+C or Cmd+C."></anvil-component>
           <div class="iris-secret" anvil:dom-node="passphrase_box" hidden>
-            <label class="iris-field">Passphrase
-              <input class="iris-input iris-secret-value" type="text" readonly
-                     autocomplete="off" spellcheck="false"
-                     anvil:dom-node="passphrase_output">
-            </label>
-            <button type="button" class="iris-button" anvil:dom-node="passphrase_copy"
-                    anvil:on-dom:click="self._on_copy_passphrase">Copy passphrase</button>
-            <p class="iris-message" role="status" anvil:dom-node="passphrase_copy_message" hidden></p>
+            <anvil-component name="passphrase_field" type="form:CopyField"
+                             prop:label="Passphrase" prop:button_text="Copy passphrase"
+                             prop:copied_text="Passphrase copied."
+                             prop:failed_text="Copy failed. The passphrase is selected, so press Ctrl+C or Cmd+C."
+                             prop:secret="True"></anvil-component>
             <p class="iris-note">Copy this passphrase now and store it somewhere safe. It won't be shown again.</p>
           </div>
         </div>
@@ -80,7 +68,7 @@
         <div class="iris-room-list" anvil:dom-node="rooms_list">
           <anvil-component type="RepeatingPanel" name="rooms_panel" prop:item_template="RoomRow"></anvil-component>
         </div>
-        <p class="iris-message" role="alert" anvil:dom-node="rooms_message" hidden></p>
+        <anvil-component name="rooms_message" type="form:Message" prop:level="alert"></anvil-component>
       </section>
       <section class="iris-card" anvil:dom-node="profile_card">
         <h2 class="iris-subheading">Call settings</h2>
@@ -94,7 +82,7 @@
         <button type="button" class="iris-button iris-button-primary"
                 anvil:dom-node="profile_save"
                 anvil:on-dom:click="self._on_profile_save">Save settings</button>
-        <p class="iris-message" role="status" anvil:dom-node="profile_message" hidden></p>
+        <anvil-component name="profile_message" type="form:Message"></anvil-component>
       </section>
     </div>
   </section>

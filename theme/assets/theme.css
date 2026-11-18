@@ -196,6 +196,11 @@ a {
   font-weight: 700;
 }
 
+/* The live region stays in the page when empty, so take its margin instead. */
+.iris-message:empty {
+  margin: 0;
+}
+
 .iris-subheading {
   margin: 0 0 var(--iris-space-4);
   font-size: 1.25rem;
@@ -266,6 +271,6 @@ a {
 
 .iris-room-actions .iris-button,
 .iris-room-edit .iris-button,
-.iris-room-confirm .iris-button {
+.iris-confirm .iris-button {
   margin: 0 var(--iris-space-2) var(--iris-space-2) 0;
 }
