@@ -345,3 +345,43 @@ def test_the_module_stays_skulpt_safe():
     assert len(module_imports) == 1
     assert "iris.services" in module_imports[0]
     assert "join" in module_imports[0]
+
+
+# --- Brave ------------------------------------------------------------------
+# Brave sends a plain Chrome user agent, and its Shields block third-party
+# storage in the room's iframe, so the room asks for the name again. It must
+# redirect, while the same user agent in real Chrome keeps the iframe.
+
+
+class _Brave:
+    def __init__(self, result=True, fail=False):
+        self.result = result
+        self.fail = fail
+
+    def isBrave(self):
+        if self.fail:
+            raise RuntimeError("no")
+        return self.result
+
+
+class _Window:
+    def __init__(self, **navigator):
+        self.navigator = type("Navigator", (), navigator)()
+
+
+def test_brave_redirects_where_the_same_chrome_agent_embeds(handoff):
+    assert handoff.method_for(WINDOWS_CHROME) == "iframe"
+    assert handoff.method_for(WINDOWS_CHROME, 0, True) == "redirect"
+    assert handoff.method_for(ANDROID_CHROME, 0, True) == "redirect"
+
+
+def test_detect_brave_reads_the_promise_check(handoff):
+    assert handoff.detect_brave(_Window(brave=_Brave(True))) is True
+    assert handoff.detect_brave(_Window(brave=_Brave(False))) is False
+
+
+def test_detect_brave_falls_back_to_not_brave(handoff):
+    assert handoff.detect_brave(_Window()) is False
+    assert handoff.detect_brave(_Window(brave=None)) is False
+    assert handoff.detect_brave(_Window(brave=_Brave(fail=True))) is False
+    assert handoff.detect_brave(None) is False

@@ -66,3 +66,17 @@ def test_e2e_iphone_agent_is_a_redirect_browser_and_desktop_chromium_embeds():
 
     assert handoff.method_for(iphone) == "redirect"
     assert handoff.method_for(chromium) == "iframe"
+
+
+def test_e2e_brave_agent_is_plain_chrome_that_only_the_brave_check_redirects():
+    """Keeps the e2e Brave test honest: its agent must embed unless Brave is set."""
+    from iris.services import handoff  # pyright: ignore[reportAttributeAccessIssue]
+
+    text = (CLIENT.parent / "tests" / "e2e" / "test_join_iframe.py").read_text()
+    assert "navigator, 'brave'" in text
+    chromium = (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "HeadlessChrome/120.0.0.0 Safari/537.36"
+    )
+    assert handoff.method_for(chromium) == "iframe"
+    assert handoff.method_for(chromium, 0, True) == "redirect"

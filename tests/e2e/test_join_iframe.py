@@ -74,3 +74,21 @@ def test_iphone_join_redirects_instead_of_embedding(browser: Browser, base_url: 
         assert page.locator("iframe.iris-frame[src]").count() == 0
     finally:
         context.close()
+
+
+def test_brave_join_redirects_instead_of_embedding(browser: Browser, base_url: str):
+    """Brave looks like Chrome but its Shields break the room inside an iframe."""
+    context = browser.new_context(base_url=base_url)
+    context.add_init_script(
+        "Object.defineProperty(navigator, 'brave', "
+        "{ value: { isBrave: () => Promise.resolve(true) } });"
+    )
+    page = context.new_page()
+    try:
+        _ready(page)
+        _fill_and_join(page, "Ann Lee")
+
+        page.wait_for_url(SEEDED_ORIGIN + "/**", timeout=VISIBLE_MS)
+        assert page.locator("iframe.iris-frame[src]").count() == 0
+    finally:
+        context.close()

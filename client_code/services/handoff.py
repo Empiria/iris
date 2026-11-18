@@ -132,14 +132,38 @@ def choose(mode, redirect_browsers, browser):
 REDIRECT_BROWSERS = parse_redirect_browsers(REDIRECT_BROWSERS_TEXT)
 
 
-def method_for(user_agent, max_touch_points=0):
-    """The method the recorded decision gives for this browser."""
+def detect_brave(window):
+    """True when `window` is Brave. False when it is not, or the check is absent.
+
+    Brave's user agent is plain Chrome, so only `navigator.brave.isBrave()` tells
+    it apart. That call returns a Promise, which anvil.js awaits for us. Never
+    raises: any failure means "not Brave", so the iframe stays the default.
+    """
+    try:
+        brave = window.navigator.brave
+        if brave is None:
+            return False
+        return bool(brave.isBrave())
+    except Exception:
+        return False
+
+
+def method_for(user_agent, max_touch_points=0, is_brave=False):
+    """The method the recorded decision gives for this browser.
+
+    Brave always redirects, whatever the decision says: its Shields block the
+    third-party storage the room needs inside an iframe, which makes the room
+    ask for the name again. This is a rule beside the decision, not a token in
+    the closed vocabulary, because a user agent cannot show it.
+    """
+    if is_brave:
+        return "redirect"
     return choose(
         HANDOFF_MODE, REDIRECT_BROWSERS, classify(user_agent, max_touch_points)
     )
 
 
-def start(url, frame=None, user_agent=None, max_touch_points=0):
+def start(url, frame=None, user_agent=None, max_touch_points=0, is_brave=False):
     """Open the room at `url`: in `frame` when the decision says so, else by redirect.
 
     `url` must be an http or https address. Returns "iframe" or "redirect".
@@ -155,7 +179,8 @@ def start(url, frame=None, user_agent=None, max_touch_points=0):
 
             user_agent = window.navigator.userAgent
             max_touch_points = _touch_count(window.navigator.maxTouchPoints)
-        method = method_for(user_agent, max_touch_points)
+            is_brave = detect_brave(window)
+        method = method_for(user_agent, max_touch_points, is_brave)
     if method == "iframe" and frame is not None:
         frame.src = url
         return "iframe"
