@@ -40,8 +40,8 @@ def test_iframe_has_no_source_until_join():
 
 
 def test_frame_applies_src_on_show_or_at_once_when_shown():
-    assert 'add_event_handler("show"' in FRAME_PY
-    assert "_shown" in FRAME_PY
+    assert "src = signal(" in FRAME_PY
+    assert "@render_effect" in FRAME_PY
     assert 'setAttribute("src"' in FRAME_PY
 
 
@@ -51,7 +51,7 @@ def test_join_hosts_the_frame_hidden_and_swaps_it_in():
     assert re.search(r'anvil:dom-node="frame_shell"[^>]*\bhidden\b', JOIN_HTML)
     assert "handoff.start(" in JOIN_PY
     assert "self.meeting_frame" in JOIN_PY
-    assert 'dom_nodes["frame_shell"].hidden = False' in JOIN_PY
+    assert 'dom_nodes["frame_shell"].hidden = state != "joined"' in JOIN_PY
 
 
 def test_e2e_iphone_agent_is_a_redirect_browser_and_desktop_chromium_embeds():

@@ -2,6 +2,7 @@
 # Copyright (c) 2026 Empiria
 
 import anvil.server
+from anvil_reactive.main import render_effect, signal
 
 from iris.services import (
     handoff,  # pyright: ignore[reportAttributeAccessIssue]
@@ -20,13 +21,48 @@ READY_LEDE = "Enter your name to join the meeting."
 
 
 class Join(JoinTemplate):
+    """The join page. One `state` signal says what the page shows.
+
+    "loading" until the lookup answers, then "ready", "locked", "missing" or
+    "error". "joined" once the room is on screen in the page. `_render` is the
+    only code that shows or hides a card, and the only place focus moves when
+    the state changes.
+    """
+
+    state = signal("loading")
+
     def __init__(self, routing_context=None, **properties):
         self.routing_context = routing_context
         self.found = None
-        self.slug = None
-        self.locked = False
         self.init_components(**properties)
         self.add_event_handler("show", self.form_show)
+
+    @render_effect
+    def _render(self):
+        state = self.state
+        card_up = state in ("ready", "locked")
+        self.dom_nodes["join_main"].hidden = state == "joined"
+        self.dom_nodes["frame_shell"].hidden = state != "joined"
+        self.dom_nodes["join_card"].hidden = not card_up
+        self.loading_card.visible = state == "loading"
+        self.missing_card.visible = state == "missing"
+        self.error_card.visible = state == "error"
+        locked = state == "locked"
+        self.passphrase_input.visible = locked
+        if card_up:
+            self.dom_nodes["meeting_title"].textContent = self._title
+            self.dom_nodes["join_lede"].textContent = (
+                LOCKED_LEDE if locked else READY_LEDE
+            )
+            (self.passphrase_input if locked else self.name_input).focus()
+        elif state == "missing":
+            self.missing_card.focus()
+        elif state == "error":
+            self.error_card.focus()
+        elif state == "joined":
+            self.meeting_frame.focus()
+
+    _title = ""
 
     def _route_data(self):
         """The route's loaded state, or a fresh lookup when there is none."""
@@ -37,35 +73,25 @@ class Join(JoinTemplate):
         slug = context.params["slug"] if context else None
         return join.load_meeting(slug, anvil.server.call)
 
-    def _show_only(self, card):
-        self.dom_nodes["join_card"].hidden = card != "join_card"
-        for name in ("loading_card", "missing_card", "error_card"):
-            getattr(self, name).visible = name == card
-
-    def _show_locked(self, locked):
-        self.locked = locked
-        self.passphrase_input.visible = locked
-        self.dom_nodes["join_lede"].textContent = LOCKED_LEDE if locked else READY_LEDE
+    def _slug(self):
+        context = self.routing_context
+        return context.params["slug"] if context else None
 
     def form_show(self, **event_args):
-        data = self._route_data()
-        state = data["state"]
-        if state == "ready":
-            self.found = data["found"]
-            title = str(self.found["title"] or "").strip()
-            self.dom_nodes["meeting_title"].textContent = title or "Your meeting"
-            self._show_locked(False)
-            self._show_only("join_card")
-        elif state == "locked":
-            context = self.routing_context
-            self.slug = context.params["slug"] if context else None
-            self.dom_nodes["meeting_title"].textContent = LOCKED_HEADING
-            self._show_locked(True)
-            self._show_only("join_card")
-        elif state == "missing":
-            self._show_only("missing_card")
-        else:
-            self._show_only("error_card")
+        try:
+            data = self._route_data()
+            state = data["state"]
+            if state == "ready":
+                self.found = data["found"]
+                title = str(self.found["title"] or "").strip()
+                self._title = title or "Your meeting"
+            elif state == "locked":
+                self._title = LOCKED_HEADING
+        except Exception:
+            state = "error"
+        if state not in ("ready", "locked", "missing"):
+            state = "error"
+        self.state = state
 
     def _show_message(self, text):
         self.join_message.show(text)
@@ -78,7 +104,7 @@ class Join(JoinTemplate):
         its fixed message and puts the cursor back in the field.
         """
         field = self.passphrase_input
-        result = join.unlock(self.slug, field.value, anvil.server.call)
+        result = join.unlock(self._slug(), field.value, anvil.server.call)
         field.value = ""
         state = result["state"]
         if state == "ready":
@@ -94,21 +120,22 @@ class Join(JoinTemplate):
             name = join.clean_display_name(self.name_input.value)
         except ValueError as error:
             self._show_message(str(error))
+            self.name_input.focus()
             return
         button = self.dom_nodes["join_button"]
         button.disabled = True
-        if self.locked and self.found is None:
-            self.found = self._unlock()
-            if self.found is None:
-                button.disabled = False
-                return
         try:
+            if self.state == "locked" and self.found is None:
+                self.found = self._unlock()
+                if self.found is None:
+                    return
             # Same call stack as the click, so the frame is made by a user gesture.
             how = handoff.start(join.join_url(self.found, name), self.meeting_frame)
+            if how == "iframe":
+                self.state = "joined"
         except ValueError:
             self._show_message(NOT_SET_UP_MESSAGE)
+        except Exception:
+            self._show_message(UNLOCK_ERROR_MESSAGE)
+        finally:
             button.disabled = False
-            return
-        if how == "iframe":
-            self.dom_nodes["join_main"].hidden = True
-            self.dom_nodes["frame_shell"].hidden = False

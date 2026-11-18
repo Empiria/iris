@@ -20,3 +20,8 @@ class StatusCard(StatusCardTemplate):
         title.textContent = "" if heading is None else str(heading)
         title.hidden = not title.textContent
         self.dom_nodes["body"].textContent = "" if text is None else str(text)
+
+    def focus(self):
+        """Move focus to the card's text, so a screen reader reads it out."""
+        heading = self.dom_nodes["heading"]
+        (self.dom_nodes["body"] if heading.hidden else heading).focus()

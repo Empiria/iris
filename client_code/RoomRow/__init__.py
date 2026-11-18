@@ -2,6 +2,7 @@
 # Copyright (c) 2026 Empiria
 
 from anvil.js import window
+from anvil_reactive.main import render_effect, signal
 
 from iris.services import (
     clipboard,  # pyright: ignore[reportAttributeAccessIssue]
@@ -37,18 +38,47 @@ class RoomRow(RoomRowTemplate):
     the server.
     """
 
-    _pending = ""
+    # What the row is doing: "idle", "editing", or "rotate" / "delete" while it
+    # waits for confirmation. `_show_mode` is the only code that acts on it.
+    mode = signal("idle")
+    # The button that opened the current mode, so focus can go back to it.
+    _opener = ""
 
     def __init__(self, **properties):
         self.init_components(**properties)
-        self._pending = ""
         self.add_event_handler("show", self.form_show)
         self.confirm_bar.set_event_handler("confirm", self._on_confirm)
         self.confirm_bar.set_event_handler("cancel", self._on_cancel)
-        self._render()
 
     def form_show(self, **event_args):
+        # `item` is set by the panel after construction, so this is the first
+        # point where the row can be drawn.
         self._render()
+
+    @render_effect
+    def _show_mode(self):
+        mode = self.mode
+        asking = mode in ("rotate", "delete")
+        self.dom_nodes["edit_box"].hidden = mode != "editing"
+        self.dom_nodes["room_actions"].hidden = mode != "idle"
+        if mode == "rotate":
+            self.confirm_bar.ask(ROTATE_WARNING, "Rotate now")
+        elif mode == "delete":
+            self.confirm_bar.ask(DELETE_WARNING, "Delete now")
+        elif not asking:
+            self.confirm_bar.dismiss()
+        if mode == "editing":
+            self.title_input.focus()
+        elif mode == "idle" and self._opener:
+            # Back to the plain row: put the cursor on the button that was used.
+            opener = self._opener
+            self._opener = ""
+            if opener == "edit_button":
+                self.dom_nodes["edit_button"].focus()
+            elif opener == "rotate_button":
+                self.dom_nodes["rotate_button"].focus()
+            elif opener == "delete_button":
+                self.dom_nodes["delete_button"].focus()
 
     def _room(self):
         found = getattr(self, "item", None)
@@ -93,19 +123,6 @@ class RoomRow(RoomRowTemplate):
     def _show_message(self, text):
         self.row_message.show(text)
 
-    def _reset(self):
-        """Back to the plain row: no edit box, no confirmation."""
-        self._pending = ""
-        self.dom_nodes["edit_box"].hidden = True
-        self.confirm_bar.dismiss()
-        self.dom_nodes["room_actions"].hidden = False
-
-    def _ask(self, kind, warning, button_text):
-        self._reset()
-        self._pending = kind
-        self.dom_nodes["room_actions"].hidden = True
-        self.confirm_bar.ask(warning, button_text)
-
     def _on_copy(self, event, **properties):
         link = str(self.dom_nodes["room_link"].textContent or "")
         if clipboard.copy(link):
@@ -117,32 +134,32 @@ class RoomRow(RoomRowTemplate):
 
     def _on_edit(self, event, **properties):
         self._show_message("")
-        self._reset()
-        field = self.title_input
-        field.value = str(self._room().get("title") or "")
-        self.dom_nodes["room_actions"].hidden = True
-        self.dom_nodes["edit_box"].hidden = False
-        field.focus()
+        self.title_input.value = str(self._room().get("title") or "")
+        self._opener = "edit_button"
+        self.mode = "editing"
 
     def _on_save(self, event, **properties):
         title = self.title_input.value
-        self._reset()
+        self.mode = "idle"
         self._tell_parent("x-edit", slug=self._slug(), title=title)
 
     def _on_rotate(self, event, **properties):
         self._show_message("")
-        self._ask("rotate", ROTATE_WARNING, "Rotate now")
+        self._opener = "rotate_button"
+        self.mode = "rotate"
 
     def _on_delete(self, event, **properties):
         self._show_message("")
-        self._ask("delete", DELETE_WARNING, "Delete now")
+        self._opener = "delete_button"
+        self.mode = "delete"
 
     def _on_cancel(self, event=None, **properties):
-        self._reset()
+        self.mode = "idle"
 
     def _on_confirm(self, event=None, **properties):
-        kind = self._pending
-        self._reset()
+        kind = self.mode
+        self._opener = ""
+        self.mode = "idle"
         if kind == "rotate":
             self._tell_parent("x-rotate", slug=self._slug())
         elif kind == "delete":

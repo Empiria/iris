@@ -1,37 +1,29 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
+from anvil_reactive.main import render_effect, signal
+
 from ._anvil_designer import MeetingFrameTemplate
 
 
 class MeetingFrame(MeetingFrameTemplate):
     """The one iframe that holds the room.
 
-    It has no source until the Join page sets `src` after a person has pressed
-    Join, so nothing asks for the camera or microphone before then. The source is
-    applied when the form is shown, or at once if it is already shown.
+    `src` is the component's declared property, held as a signal. It is empty
+    until the Join page sets it after a person has pressed Join, so nothing asks
+    for the camera or microphone before then. The effect copies it onto the
+    iframe whenever it changes, once the form is on the page.
     """
 
-    def __init__(self, **properties):
-        self._src = ""
-        self._shown = False
-        self.init_components(**properties)
-        self.add_event_handler("show", self.form_show)
+    # The designer types the declared property as `property`, hence the ignore.
+    src = signal("")  # pyright: ignore[reportAssignmentType]
 
-    @property
-    def src(self):
-        return self._src
-
-    @src.setter
-    def src(self, value):
-        self._src = "" if value is None else str(value)
-        if self._shown:
-            self._apply()
-
-    def form_show(self, **event_args):
-        self._shown = True
-        self._apply()
-
+    @render_effect
     def _apply(self):
-        if self._src != "":
-            self.dom_nodes["frame"].setAttribute("src", self._src)
+        value = self.src
+        if value:
+            self.dom_nodes["frame"].setAttribute("src", str(value))
+
+    def focus(self):
+        """Move focus into the room, so the keyboard works there at once."""
+        self.dom_nodes["frame"].focus()
