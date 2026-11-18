@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Find the local stack's URL. The stack never uses a fixed host port.
 
-`just up` publishes the app on a random free loopback port (`-p 127.0.0.1::3030`)
-and writes the resolved URL to the git-ignored `.anvil/stack-url`. Everything
+`just up` publishes the app on a free loopback port it picks each time it creates
+the container (`-p 127.0.0.1:<port>:3030`, with `--origin http://localhost:<port>`
+so the page's asset and websocket URLs match) and writes the resolved URL to the
+git-ignored `.anvil/stack-url`. Everything
 else (`just seed`, `just e2e`, `just create-staff`, a bare `pytest tests/e2e`,
 `tools/dev_seed.py`) reads it back here. Precedence, first match wins:
 
@@ -14,6 +16,7 @@ the other tools can import it and `python3 tools/stack_url.py` runs anywhere.
 
     python3 tools/stack_url.py              print the app URL
     python3 tools/stack_url.py uplink       print the uplink URL
+    python3 tools/stack_url.py free-port    print a free loopback port
     python3 tools/stack_url.py refresh CTR  ask podman for CTR's published port,
                                             write .anvil/stack-url, print the URL
     python3 tools/stack_url.py clear        remove .anvil/stack-url
@@ -24,6 +27,7 @@ recipe can try it and fall back to the file.
 
 import os
 import re
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -68,6 +72,14 @@ def uplink_url(environ=None, url_file=None):
     return f"{scheme}://{parts.netloc}/_/uplink"
 
 
+def free_port():
+    """A free loopback port. `just up` needs it before the container exists,
+    because the app's --origin has to name the port the browser will use."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
 def parse_published_port(text):
     """The host port from `podman port CTR 3030` output such as `127.0.0.1:41234`."""
     for line in text.splitlines():
@@ -105,6 +117,8 @@ def main(argv):
     try:
         if command == "url":
             print(base_url())
+        elif command == "free-port":
+            print(free_port())
         elif command == "uplink":
             print(uplink_url())
         elif command == "refresh" and len(argv) == 3:

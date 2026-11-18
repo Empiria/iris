@@ -5,8 +5,8 @@
 
 vault := env_var_or_default("MNEMOSYNE_VAULT", env_var("HOME") + "/projects/empiria/mnemosyne")
 
-# There is no fixed host port. `just up` publishes the app on a random free
-# loopback port and writes the URL to the git-ignored .anvil/stack-url. Recipes and
+# There is no fixed host port. `just up` publishes the app on a free
+# loopback port it picks and writes the URL to the git-ignored .anvil/stack-url. Recipes and
 # tools read it back through tools/stack_url.py, which takes IRIS_URL first, so
 # IRIS_URL still points a tool at another stack.
 
@@ -23,7 +23,7 @@ img := "iris-anvil-dev"
 # One container and database per checkout, named after its directory, so a
 # stale container left by another checkout or worktree can't block this one.
 # IRIS_CONTAINER overrides the name, and so does `just ctr=NAME up`, so several
-# stacks can run at once, each on its own random port.
+# stacks can run at once, each on its own port.
 ctr := env_var_or_default("IRIS_CONTAINER", "iris-anvil-" + file_name(justfile_directory()))
 vol := ctr + "-data"
 
@@ -128,24 +128,38 @@ build: deps (_need-podman "build")
     podman build -t {{ img }} .anvil/build
     rm -rf .anvil/build
 
-# [host] Start the stack on a random free loopback port, or resume the stopped one (the DB survives). Records the URL in .anvil/stack-url.
+# [host] Start the stack on a free loopback port, or resume the stopped one (the DB survives). Records the URL in .anvil/stack-url.
 up: (_need-podman "up")
     #!/usr/bin/env bash
     set -euo pipefail
+    started=0
     if podman container exists {{ ctr }}; then
-        podman start {{ ctr }}
-    else
+        if podman start {{ ctr }}; then
+            started=1
+        else
+            # A stopped container keeps its host port. If something else took it,
+            # recreate the container on a new port. The database volume stays.
+            echo "up: {{ ctr }} would not start (its host port may be taken); recreating it"
+            podman rm -f {{ ctr }}
+        fi
+    fi
+    if [ "$started" = 0 ]; then
         # Loopback only: the dev uplink key must not be reachable from the network.
         # The --dep-id flags come from anvil.yaml, so ids are never typed twice.
         # After a package_name or dep_id change in anvil.yaml, run `just fresh`.
         [ -n "{{ package }}" ] || { echo "up: no package_name in anvil.yaml"; exit 1; }
-        # `127.0.0.1::3030` lets podman pick a free host port, so stacks from other
-        # checkouts and projects never collide. The app inside still listens on 3030.
-        podman run -d --name {{ ctr }} -p 127.0.0.1::3030 \
+        # No fixed port: other checkouts and projects run stacks too. Pick a free one
+        # here, because the app's --origin must name the port the browser will use.
+        # Left alone the origin is the container's own 3030, and the page then loads
+        # its assets and websocket from the wrong place. The app inside still listens
+        # on 3030.
+        port="$(python3 tools/stack_url.py free-port)"
+        podman run -d --name {{ ctr }} -p "127.0.0.1:$port:3030" \
             -v "{{ justfile_directory() }}:/srv/{{ package }}:ro,z" -v {{ vol }}:/data \
-            {{ img }} --app /srv/{{ package }} $(uv run --script tools/anvil_deps.py --dep-id-args)
+            {{ img }} --app /srv/{{ package }} --origin "http://localhost:$port" --port 3030 \
+            $(uv run --script tools/anvil_deps.py --dep-id-args)
     fi
-    # The host port is assigned when the container starts, so ask the container.
+    # Ask the container which host port it is on, so the file always matches it.
     url="$(python3 tools/stack_url.py refresh {{ ctr }})"
     echo "stack: $url"
 
@@ -286,7 +300,7 @@ host-check: (_need-podman "host-check")
     begin "the port is published on loopback only"
     published="$(podman port {{ ctr }})"
     echo "$published"
-    [[ "$published" =~ ^3030/tcp\ -\>\ 127\.0\.0\.1:([0-9]+)$ ]] || fail "expected '3030/tcp -> 127.0.0.1:<random port>'"
+    [[ "$published" =~ ^3030/tcp\ -\>\ 127\.0\.0\.1:([0-9]+)$ ]] || fail "expected '3030/tcp -> 127.0.0.1:<host port>'"
     host_port="${BASH_REMATCH[1]}"
     [ "$(python3 tools/stack_url.py)" = "http://localhost:$host_port/" ] || fail ".anvil/stack-url does not match the published port $host_port"
     listen="$(ss -ltnH "sport = :$host_port")"

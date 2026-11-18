@@ -39,8 +39,9 @@ WORKDIR /srv
 # package_name so the app server finds it as a sibling of the app itself.
 COPY --chown=app:app deps/ /srv/
 
-# The app's port inside the container. It is never the host port: `just up` publishes
-# it on a random free loopback port (-p 127.0.0.1::3030), recorded in .anvil/stack-url.
+# The app's port inside the container. It is never the host port: `just up` picks a
+# free loopback port, publishes it (-p 127.0.0.1:<port>:3030), passes
+# --origin http://localhost:<port>, and records the URL in .anvil/stack-url.
 EXPOSE 3030
 
 # The app itself is bind-mounted at /srv/<package_name> by `just up`.

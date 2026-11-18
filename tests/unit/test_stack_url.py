@@ -84,3 +84,17 @@ def test_write_url_makes_the_directory_and_records_a_loopback_url(stack_url, tmp
     target = tmp_path / "deep" / "stack-url"
     assert stack_url.write_url(41234, target) == "http://localhost:41234/"
     assert target.read_text() == "http://localhost:41234/\n"
+
+
+def test_free_port_is_a_bindable_loopback_port(stack_url):
+    import socket
+
+    port = stack_url.free_port()
+    assert 1024 <= port <= 65535
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", port))
+
+
+def test_the_free_port_command_prints_a_port(stack_url, capsys):
+    assert stack_url.main(["stack_url.py", "free-port"]) == 0
+    assert capsys.readouterr().out.strip().isdigit()
