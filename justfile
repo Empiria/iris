@@ -142,11 +142,13 @@ fresh: (_need-podman "fresh")
 logs: (_need-podman "logs")
     podman logs -f {{ ctr }}
 
-# Seed the running stack over the dev uplink (needs the stack up).
+# [host] Seed the running stack over the dev uplink (needs the stack up).
+# Host-only: a worker sandbox can't reach the host stack (see AGENTS.md).
 seed: _need-stack
     uv run --script tools/dev_seed.py
 
-# Browser tests against the running stack (needs the stack up).
+# [host] Browser tests against the running stack (needs the stack up).
+# Host-only: a worker sandbox can't reach the host stack (see AGENTS.md).
 e2e: _need-stack
     uv run pytest tests/e2e --base-url {{ base_url }}
 
@@ -254,6 +256,11 @@ host-check: (_need-podman "host-check")
     begin "browser test (QA-06, A4)"
     just e2e
 
+    begin "the server log has no client error reports"
+    if podman logs {{ ctr }} 2>&1 | grep -A3 'Error report from client code'; then
+        fail "the browser reported a client error (above)"
+    fi
+
     begin "lifecycle: down"
     just down
     if podman ps --format '{{{{.Names}}' | grep -qx {{ ctr }}; then fail "{{ ctr }} is still running"; fi
@@ -298,4 +305,4 @@ _need-podman recipe:
 
 [private]
 _need-stack:
-    @curl -fsS -o /dev/null --max-time 5 --retry {{ stack_retries }} --retry-delay 2 --retry-connrefused "{{ base_url }}" || { echo "No stack answering at {{ base_url }}. Start it on the host with 'just up'."; exit 1; }
+    @curl -fsS -o /dev/null --max-time 5 --retry {{ stack_retries }} --retry-delay 2 --retry-connrefused "{{ base_url }}" || { echo "No stack answering at {{ base_url }}. Start it on the host with 'just up'. A worker sandbox can't reach the host stack (see AGENTS.md), so run this recipe on the host."; exit 1; }
