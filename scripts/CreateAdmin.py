@@ -11,7 +11,13 @@ Arguments: [EMAIL [PASSWORD]]. Each value comes from, in order, the launch
 argument, the environment variable (IRIS_ADMIN_EMAIL, IRIS_ADMIN_PASSWORD), the
 app secret (iris_admin_email, iris_admin_password). With no password anywhere a
 random one is generated and printed once, on a line `generated password: ...`.
-The password is never printed from any other source. The older names
+The password is never printed from any other source. The generated password is
+printed because nothing else gets the first admin in: sign-up is off, and a
+password reset needs working email, which a fresh or local deployment may not
+have. To avoid printing one at all, supply your own (argument, environment or
+secret). Either way the password must meet the Users service's secure-password
+rule (`require_secure_passwords` in `anvil.yaml`). Once email works, the Forgot
+password flow replaces a generated password. The older names
 IRIS_STAFF_EMAIL, IRIS_STAFF_PASSWORD, iris_staff_email and iris_staff_password
 are still read as a fallback.
 

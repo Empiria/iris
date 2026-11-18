@@ -117,8 +117,8 @@ services:
     enable_automatically: true
     use_email: true
     allow_remember_me: true
-    remember_me_days: 30
-    require_secure_passwords: false
+    remember_me_days: 7
+    require_secure_passwords: true
     share_login_status: false
     use_token: false
     use_google: false
