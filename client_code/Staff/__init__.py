@@ -203,9 +203,17 @@ class Staff(StaffTemplate):
         message.textContent = text
         message.hidden = text == ""
 
+    def _set_profile_enabled(self, enabled):
+        self.dom_nodes["profile_input"].disabled = not enabled
+        self.dom_nodes["profile_save"].disabled = not enabled
+
     def _load_profile(self):
+        # Locked until the saved text arrives, so a late answer can't overwrite
+        # what the admin has already typed.
+        self._set_profile_enabled(False)
         try:
             self.dom_nodes["profile_input"].value = anvil.server.call("get_profile")
+            self._set_profile_enabled(True)
         except permissions.PermissionDenied:
             # Not a refresh: this runs inside the render effect, and a refresh
             # would change the signal it reads.
