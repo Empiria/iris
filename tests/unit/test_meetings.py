@@ -339,3 +339,183 @@ def test_lookup_room_of_a_permanent_slug_is_locked_for_everyone(
     assert meetings.lookup_room("acme-board") == {"kind": "permanent", "locked": True}
     as_user(None)
     assert meetings.lookup_room("ACME-BOARD") == {"kind": "permanent", "locked": True}
+
+
+# --- room management callables (STAFF-04, D-7, D-8) -----------------------
+
+MANAGEMENT_CALLABLES = ("list_rooms", "update_room", "delete_room", "rotate_passphrase")
+
+
+def _manage(meetings, name):
+    args = {
+        "list_rooms": (),
+        "update_room": ("acme-board", "New title"),
+        "delete_room": ("acme-board",),
+        "rotate_passphrase": ("acme-board",),
+    }[name]
+    return getattr(meetings, name)(*args)
+
+
+@pytest.mark.parametrize("name", MANAGEMENT_CALLABLES)
+def test_management_callables_require_an_admin(meetings, load_client_module, name):
+    permissions = load_client_module("services/permissions")
+
+    assert _callable(name).kwargs.get("require_user") is permissions.is_staff
+
+
+def test_list_rooms_returns_plain_summaries_without_secrets(
+    meetings, tables, admin, fast_kdf
+):
+    meetings.create_permanent_room("Acme Board", "Acme quarterly")
+    meetings.create_one_off_link("Kickoff")
+
+    rooms = meetings.list_rooms()
+
+    assert len(rooms) == 2
+    assert all(set(r) == {"slug", "title", "kind", "created"} for r in rooms)
+    text = repr(rooms)
+    for row in tables.room.rows:
+        for column in ("vdo_room", "vdo_password", "verifier", "verifier_salt"):
+            if row.get(column):
+                assert str(row.get(column)) not in text
+
+
+def test_update_room_cleans_the_title(meetings, tables, admin, fast_kdf):
+    meetings.create_permanent_room("Acme Board", "Acme quarterly")
+
+    result = meetings.update_room("Acme-Board", "  a\nb  ")
+
+    assert result["title"] == "a b"
+    assert tables.room.rows[0]["title"] == "a b"
+    assert tables.room.rows[0]["slug"] == "acme-board"
+
+
+def test_update_room_may_blank_the_title(meetings, tables, admin, fast_kdf):
+    meetings.create_permanent_room("Acme Board", "Acme quarterly")
+
+    assert meetings.update_room("acme-board", "   ")["title"] == ""
+
+
+def test_update_room_refuses_a_title_that_is_not_text(
+    meetings, tables, admin, fast_kdf
+):
+    meetings.create_permanent_room("Acme Board", "Acme quarterly")
+
+    with pytest.raises(ValueError, match="Title must be text"):
+        meetings.update_room("acme-board", 5)
+
+    assert tables.room.rows[0]["title"] == "Acme quarterly"
+
+
+@pytest.mark.parametrize("slug", [None, 5, ["a"], {}])
+@pytest.mark.parametrize("name", ["update_room", "delete_room", "rotate_passphrase"])
+def test_a_slug_that_is_not_text_is_no_such_room(
+    meetings, tables, admin, fast_kdf, name, slug
+):
+    meetings.create_permanent_room("Acme Board")
+    args = (slug, "x") if name == "update_room" else (slug,)
+
+    with pytest.raises(ValueError, match="No such room."):
+        getattr(meetings, name)(*args)
+
+    assert len(tables.room.rows) == 1
+
+
+@pytest.mark.parametrize("name", ["update_room", "delete_room", "rotate_passphrase"])
+def test_an_unknown_slug_is_no_such_room(meetings, tables, admin, fast_kdf, name):
+    args = ("nothing-here", "x") if name == "update_room" else ("nothing-here",)
+
+    with pytest.raises(ValueError, match="No such room."):
+        getattr(meetings, name)(*args)
+
+
+def test_delete_room_removes_it_and_lookup_is_none(meetings, tables, admin, fast_kdf):
+    meetings.create_permanent_room("Acme Board")
+    made = meetings.create_one_off_link("Kickoff")
+
+    assert meetings.delete_room("acme-board") == {"slug": "acme-board"}
+
+    assert meetings.lookup_room("acme-board") is None
+    assert [r["slug"] for r in tables.room.rows] == [made["slug"]]
+
+
+def test_delete_room_works_on_a_one_off_and_frees_nothing_else(meetings, tables, admin):
+    made = meetings.create_one_off_link("Kickoff")
+
+    meetings.delete_room(made["slug"])
+
+    assert meetings.lookup_room(made["slug"]) is None
+    assert tables.room.rows == []
+
+
+def test_a_deleted_name_can_be_made_again(meetings, tables, admin, fast_kdf):
+    meetings.create_permanent_room("Acme Board")
+    meetings.delete_room("acme-board")
+
+    assert meetings.create_permanent_room("Acme Board")["slug"] == "acme-board"
+
+
+def test_rotate_passphrase_replaces_the_passphrase(
+    meetings, tables, admin, as_user, fast_kdf
+):
+    old = meetings.create_permanent_room("Acme Board")["passphrase"]
+
+    result = meetings.rotate_passphrase("acme-board")
+
+    assert set(result) == {"slug", "passphrase"}
+    assert result["passphrase"] != old
+    as_user(None)
+    assert meetings.unlock_room("acme-board", old) == {
+        "ok": False,
+        "reason": "incorrect",
+    }
+    assert meetings.unlock_room("acme-board", result["passphrase"])["ok"] is True
+
+
+def test_rotate_passphrase_holds_no_room_secrets(meetings, tables, admin, fast_kdf):
+    meetings.create_permanent_room("Acme Board")
+
+    result = meetings.rotate_passphrase("acme-board")
+    row = tables.room.rows[0]
+
+    for column in ("vdo_room", "vdo_password", "verifier"):
+        assert row[column] not in repr(result)
+
+
+def test_rotate_passphrase_of_a_one_off_is_refused(meetings, tables, admin):
+    made = meetings.create_one_off_link("Kickoff")
+
+    with pytest.raises(ValueError, match="Only permanent rooms have a passphrase."):
+        meetings.rotate_passphrase(made["slug"])
+
+
+@pytest.mark.parametrize("name", MANAGEMENT_CALLABLES)
+def test_management_callables_refuse_signed_out_and_touch_nothing(
+    meetings, tables, admin, fast_kdf, as_user, name
+):
+    meetings.create_permanent_room("Acme Board", "Acme quarterly")
+    before = [dict(r._values) for r in tables.room.rows]
+    reads = tables.room.reads
+    as_user(None)
+
+    with pytest.raises(anvil.server.PermissionDenied):
+        _manage(meetings, name)
+
+    assert [dict(r._values) for r in tables.room.rows] == before
+    assert tables.room.reads == reads
+
+
+@pytest.mark.parametrize("name", MANAGEMENT_CALLABLES)
+def test_management_callables_refuse_non_admin_and_touch_nothing(
+    meetings, tables, admin, fast_kdf, as_user, make_user, name
+):
+    meetings.create_permanent_room("Acme Board", "Acme quarterly")
+    before = [dict(r._values) for r in tables.room.rows]
+    reads = tables.room.reads
+    as_user(make_user(email="viewer@example.test", is_staff=False))
+
+    with pytest.raises(anvil.server.PermissionDenied):
+        _manage(meetings, name)
+
+    assert [dict(r._values) for r in tables.room.rows] == before
+    assert tables.room.reads == reads

@@ -67,6 +67,35 @@ def _store_attempts(row, failed, locked_until):
     row.save()
 
 
+def _summary(row):
+    """The fields an admin's room list shows. No secret of the room is in it."""
+    return {
+        "slug": row["slug"],
+        "title": row["title"] or "",
+        "kind": row["kind"],
+        "created": row["created"],
+    }
+
+
+def _find_room(slug):
+    """The row for `slug` (any kind, active or not), or ValueError "No such room."."""
+    slug = slugs.normalise(slug) if isinstance(slug, str) else ""
+    row = app_tables.room.get(slug=slug) if slugs.looks_like_slug(slug) else None
+    if row is None:
+        raise ValueError("No such room.")
+    return row
+
+
+def _newest_first(rows):
+    """Rows by creation time, newest first, slug order within a tie, undated last."""
+    dated = [row for row in rows if row["created"] is not None]
+    undated = [row for row in rows if row["created"] is None]
+    dated.sort(key=lambda row: row["slug"])
+    dated.sort(key=lambda row: _naive_utc(row["created"]), reverse=True)
+    undated.sort(key=lambda row: row["slug"])
+    return dated + undated
+
+
 class Room(app_tables.room.Row, buffered=True, attrs=True):
     """A meeting room. Its methods return plain dicts, not rows.
 
@@ -231,3 +260,64 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
                 "kind": "permanent",
             },
         }
+
+    @anvil.server.server_method
+    @classmethod
+    def list_for_staff(cls):
+        """Every room, newest first, as plain summaries. Admins only.
+
+        Each summary has the slug, title, kind and creation time. The vdo room,
+        vdo password and verifier never leave the server.
+        """
+        permissions.require_staff()
+        return [_summary(row) for row in _newest_first(list(app_tables.room.search()))]
+
+    @anvil.server.server_method
+    @classmethod
+    def update_title(cls, slug, title):
+        """Change a room's title. Admins only. The slug stays as it is (D-7)."""
+        permissions.require_staff()
+        row = _find_room(slug)
+        if not isinstance(title, str):
+            raise ValueError("Title must be text")
+        row.update(title=title, updated=_now())
+        row.save()
+        return _summary(row)
+
+    @anvil.server.server_method
+    @classmethod
+    def remove(cls, slug):
+        """Delete a room for good. Admins only (D-8). Its link stops working."""
+        permissions.require_staff()
+        row = _find_room(slug)
+        row_slug = row["slug"]
+        row.delete()
+        return {"slug": row_slug}
+
+    @anvil.server.server_method
+    @classmethod
+    def rotate(cls, slug):
+        """Give a permanent room a new passphrase. Admins only (D-8).
+
+        The vdo room and vdo password are replaced too, so a person holding the
+        old details is out of the room, and any lock is cleared. The new
+        passphrase is returned this once; only its slow hash is stored.
+        """
+        permissions.require_staff()
+        row = _find_room(slug)
+        if row["kind"] != "permanent":
+            raise ValueError("Only permanent rooms have a passphrase.")
+        phrase = passphrase.generate()
+        record = _verifier().hash_passphrase(passphrase.normalise(phrase))
+        row.update(
+            verifier=record["verifier"],
+            verifier_salt=record["verifier_salt"],
+            kdf_iterations=record["kdf_iterations"],
+            vdo_room=slugs.new_vdo_room(),
+            vdo_password=slugs.random_string(_HEX, _VDO_PASSWORD_LENGTH),
+            failed_unlocks=0,
+            locked_until=None,  # pyright: ignore[reportArgumentType]
+            updated=_now(),
+        )
+        row.save()
+        return {"slug": row["slug"], "passphrase": phrase}

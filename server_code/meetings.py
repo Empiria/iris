@@ -72,3 +72,50 @@ def unlock_room(slug, passphrase):
     if not isinstance(slug, str):
         return {"ok": False, "reason": "missing"}
     return Room.unlock(slug, passphrase)
+
+
+@anvil.server.callable(require_user=permissions.is_staff)
+def list_rooms():
+    """Every room, newest first, as plain summaries. Admins only.
+
+    Each summary is {slug, title, kind, created}. No room secret is in it.
+    `Room.list_for_staff` repeats the admin check.
+    """
+    return Room.list_for_staff()
+
+
+@anvil.server.callable(require_user=permissions.is_staff)
+def update_room(slug, title):
+    """Change a room's title and return its summary. Admins only (D-7).
+
+    The slug cannot change, because links already shared point at it. Raises
+    ValueError("No such room.") for an unknown slug.
+    """
+    if not isinstance(slug, str):
+        raise ValueError("No such room.")
+    return Room.update_title(slug, clean_title(title))
+
+
+@anvil.server.callable(require_user=permissions.is_staff)
+def delete_room(slug):
+    """Delete a room for good, after the admin confirmed it. Admins only (D-8).
+
+    Its link stops working at once. Raises ValueError("No such room.") for an
+    unknown slug.
+    """
+    if not isinstance(slug, str):
+        raise ValueError("No such room.")
+    return Room.remove(slug)
+
+
+@anvil.server.callable(require_user=permissions.is_staff)
+def rotate_passphrase(slug):
+    """Give a permanent room a new passphrase and return it. Admins only (D-8).
+
+    The reply carries the slug and the new passphrase, shown this once. The old
+    passphrase, vdo room and vdo password stop working. A one-off room has no
+    passphrase and raises ValueError.
+    """
+    if not isinstance(slug, str):
+        raise ValueError("No such room.")
+    return Room.rotate(slug)
