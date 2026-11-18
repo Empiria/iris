@@ -22,6 +22,10 @@ vol := "iris-anvil-data"
 
 export IRIS_UPLINK_URL := uplink_url
 
+# Playwright browsers live in the repo's git-ignored .anvil/, not under $HOME, so
+# every recipe and check finds them whatever HOME is. `just setup` fills it.
+export PLAYWRIGHT_BROWSERS_PATH := env_var_or_default("PLAYWRIGHT_BROWSERS_PATH", justfile_directory() + "/.anvil/ms-playwright")
+
 # List the available recipes (the default recipe).
 list:
     @just --list

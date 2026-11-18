@@ -93,6 +93,7 @@ Iris builds its UI from HTML form templates and HTML components. **Don't use Mat
 ## Checks
 
 - Run `just setup` once per clone or worktree. It is idempotent: it creates the `CLAUDE.md` link, the hooks and the tools, and never needs an Anvil login.
+- Playwright's browsers live in the gitignored `.anvil/ms-playwright`, not under `$HOME`, so the e2e tests find them whatever HOME is. The justfile exports `PLAYWRIGHT_BROWSERS_PATH` with that path, and `tests/e2e/conftest.py` sets it for a bare `pytest` run. A value you set yourself wins. `just setup` installs chromium there, which needs network the first time.
 - `just deps` fetches the dependency apps from their public GitHub repos at the tags pinned in `anvil.yaml` into the gitignored `.anvil/` directory. It needs no Anvil login and doesn't write to `.git/config`. `validate` and `check` run it for you.
 - `just stubs` is a note only: anvil-pyright bundles the Anvil stubs, so never wire in a `.stubs/` directory.
 - `just lint` runs ruff with Empiria's rule set from `.ruff.toml`. In `client_code/`, reject autofixes that bring in subscripted generics or `contextlib.suppress`: Skulpt can't run the generics, and `contextlib.suppress` is unverified there. `just format` formats.
