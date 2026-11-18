@@ -1,4 +1,7 @@
 #!/usr/bin/env -S uv run --script
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 # /// script
 # requires-python = ">=3.9"
 # dependencies = ["pyyaml"]

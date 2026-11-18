@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Browser classification and the iframe-or-redirect hand-off (JOIN-07).
 
 `handoff.py` applies the recorded decision in 02-SPIKE-RESULTS.md. These tests

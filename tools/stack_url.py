@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Find the local stack's URL. The stack never uses a fixed host port.
 
 `just up` publishes the app on a free loopback port it picks each time it creates

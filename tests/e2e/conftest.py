@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Point Playwright at the repo's browser cache, and provide the dev accounts.
 
 `just setup` installs chromium into the git-ignored `.anvil/ms-playwright`, so a

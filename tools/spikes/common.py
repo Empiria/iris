@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Helpers the spike probes share. Imported by name from tools/spike.py's path.
 
 Heavy packages (playwright, anvil.server) are imported inside the functions that

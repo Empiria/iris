@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Create a one-off link on /admin and copy it (ADMIN-02).
 
 Runs against the live local stack. Never waits for network idle. No assertion

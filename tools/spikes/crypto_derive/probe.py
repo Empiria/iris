@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """S1 and S3: PBKDF2 in the browser through anvil.js and call_js, and on the server.
 
 Run it on the host with `just spike crypto_derive`, then `just spike-down`. The

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Create the first staff user. Spike candidate for scripts/CreateStaff.py.
 
 Arguments: [EMAIL [PASSWORD]]. Each value comes from, in order, the launch

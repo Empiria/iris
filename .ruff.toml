@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 # Empiria Anvil ruff baseline, with Iris additions.
 #
 # `select` REPLACES ruff's defaults rather than adding to them. Trimming this

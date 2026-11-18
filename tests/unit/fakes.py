@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """In-memory stand-ins for Anvil Data Tables and users, for the unit suite.
 
 Plain Python with no third-party imports. `FakeTables` plays `app_tables`: each

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The reset glue only calls the Users service and shows one fixed message."""
 
 import anvil.users

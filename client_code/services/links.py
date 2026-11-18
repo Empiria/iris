@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Build the shareable link for a meeting slug.
 
 Loads on both sides (Skulpt in the browser, CPython on the server), so it has no

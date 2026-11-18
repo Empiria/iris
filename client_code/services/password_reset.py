@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Glue for the Users service's own password reset.
 
 The service sends the email, hosts the emailed link and shows its own

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The first-admin script (scripts/CreateAdmin.py) and its local launcher.
 
 The script runs `main()` at module level, so each test executes it with

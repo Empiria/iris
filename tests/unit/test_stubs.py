@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The test harness itself: recording decorators, fake tables, users, iris package."""
 
 import importlib

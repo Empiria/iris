@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The "Forgot password?" link on the sign-in form (local stack).
 
 The local app server has no mail delivery configured, so these tests check the

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The join room that tools/dev_seed.py puts on the local stack."""
 
 import re

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """S2: what do &salt, &password and &hash do on the live vdo.ninja build?
 
 Standalone: no Anvil app and no stack. Run it with

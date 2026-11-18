@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 # Local development image for the Iris app server. Built and run by the justfile
 # (`just build`, `just up`) under rootless podman.
 #

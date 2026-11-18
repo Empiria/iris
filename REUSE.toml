@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+#
+# REUSE specification 3.x. Files that carry an SPDX header of their own are not
+# listed here. These are the tracked files that can't hold a comment, or that
+# the Anvil editor rewrites and would strip a header from. tools/spdx_check.py
+# (`just spdx`) fails when a tracked file has neither.
+version = 1
+
+[[annotations]]
+# Files with no comment syntax, and the licence texts.
+path = [
+  "LICENSE",
+  "LICENSES/**",
+  "uv.lock",
+  "pyrightconfig.json",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Copyright (c) 2026 Empiria"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+# Anvil app files that the editor generates or rewrites, and requirements.txt,
+# which Anvil reads itself. A header here could be lost on the next editor save,
+# or break the round trip.
+path = [
+  "anvil.yaml",
+  "**/.anvil_editor.yaml",
+  "theme/parameters.yaml",
+  "theme/templates.yaml",
+  "server_code/requirements.txt",
+  "**/form_template.html",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Copyright (c) 2026 Empiria"
+SPDX-License-Identifier = "MIT"

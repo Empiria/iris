@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Who counts as admin.
 
 `is_admin` is shaped for `@anvil.server.callable(require_user=is_admin)`.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Slow hash and constant-time check of a normalised room passphrase.
 
 Server-side only, and it imports no Anvil module, so a tool can load it by path.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Contract tests for tools/anvil_deps.py.
 
 The justfile (`deps`, `up`), the image build and `anvil validate` all lean on

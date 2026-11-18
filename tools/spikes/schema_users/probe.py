@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """S4 and S5: schema auto-migrate and Users sign-up controls, on a fresh database.
 
 The container is removed afterwards. The addresses and passwords here are made

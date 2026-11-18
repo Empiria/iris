@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Passphrase generation and normalisation.
 
 NORMALISE_VECTOR is the contract between creating a room and joining it: both

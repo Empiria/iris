@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The room opens in an iframe on Join, except where the decision says redirect.
 
 JOIN-07. Desktop Chromium is not in the redirect list, so Join embeds the room and

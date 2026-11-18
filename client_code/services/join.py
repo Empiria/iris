@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Join logic for a meeting link: name check, slug check, lookup and address.
 
 Loads on both sides (Skulpt in the browser, CPython on the server), so it

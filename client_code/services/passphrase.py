@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Passphrase generation and normalisation for permanent rooms.
 
 Loads on both sides (Skulpt in the browser, CPython on the server). Generation

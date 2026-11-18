@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Contract tests for tools/leftovers.py.
 
 The patterns are never spelled here: every sample line comes from the tool's own

@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: MIT
+     Copyright (c) 2026 Empiria -->
+
 # AGENTS.md
 
 Guidance for coding agents working in this repository. `CLAUDE.md` is an untracked local symlink to this file. It is listed in the git exclude file (`git rev-parse --git-path info/exclude`) and `just setup` creates it. Never commit it.
@@ -100,7 +103,8 @@ Iris builds its UI from HTML form templates and HTML components. **Don't use Mat
 - `just check` type-checks with `anvil-pyright`, not plain basedpyright.
 - `just validate` runs `anvil validate` on `anvil.yaml`, `client_code`, `server_code` and `theme`, one path at a time. It skips `tools/`, because the spike overlays under `tools/spikes/` hold forms that are only valid once laid into a spike copy of the app.
 - `just leftovers` checks that nothing from the starter has come back. It also applies any extra patterns in the optional untracked `.leftovers-local` file. `just setup` lists that file in the git exclude file, and it is never committed.
-- `just verify` runs lint, check, validate and leftovers. It is the gate before handing off.
+- `just spdx` fails if a tracked file has neither an `SPDX-License-Identifier: MIT` and `Copyright (c) 2026 Empiria` header nor a cover in `REUSE.toml`. Give every new file a header (`#` comment in py, justfile and the like, `/* */` in css, `<!-- -->` in md). JSON, lock files, `anvil.yaml`, `.anvil_editor.yaml`, `theme/*.yaml` and every `form_template.html` are covered by `REUSE.toml` instead, because they can't hold a comment or the Anvil editor rewrites them.
+- `just verify` runs lint, check, validate, leftovers and spdx. It is the gate before handing off.
 - `just unit` runs the hermetic server-side tests.
 - After editing any Anvil file (`anvil.yaml`, form templates, `client_code/**/*.py`, `server_code/**/*.py`), run `anvil --json validate <path>` and fix any reported `issues`.
 - `pytest` can't run `client_code/`. Pin server payload shapes in unit tests, and check client behaviour in a browser.

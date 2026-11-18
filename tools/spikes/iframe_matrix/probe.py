@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """H1: the iframe browser matrix. Hosted and run by hand, so nothing is probed.
 
 Assemble it with `just spike iframe_matrix --assemble-only`, push the printed

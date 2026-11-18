@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Join logic: names, slugs, lookup states and the join address (JOIN-01, 04, 06)."""
 
 import ast

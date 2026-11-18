@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 # Iris justfile. `just verify` is the static gate; `just unit` and `just e2e` are the tests.
 #
 # Sandbox rule: recipes marked [host] need rootless podman, which can't run in a
@@ -108,12 +111,16 @@ validate: deps
 leftovers:
     python3 tools/leftovers.py
 
+# Fail if a tracked file has neither an SPDX header nor a REUSE.toml cover.
+spdx:
+    python3 tools/spdx_check.py
+
 # Comment-to-code density, as a prompt to re-read, not a gate.
 density:
     @python3 "{{ vault }}/technologies/python/tools/comment_ratio.py" client_code server_code
 
 # The whole static gate. Run before every commit.
-verify: lint check validate leftovers
+verify: lint check validate leftovers spdx
 
 # Hermetic unit tests. No stack needed.
 unit:

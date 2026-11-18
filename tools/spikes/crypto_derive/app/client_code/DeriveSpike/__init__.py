@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 import anvil.js
 import anvil.server
 from anvil.js.window import TextEncoder, crypto, performance

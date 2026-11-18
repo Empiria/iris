@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Smoke test: the app root loads on the local stack and shows the admin sign-in.
 
 Follows the vault's playwright-patterns note: goto(""), explicit visibility waits

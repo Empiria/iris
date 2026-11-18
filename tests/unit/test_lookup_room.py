@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """lookup_room: the public callable that opens a meeting link (JOIN-01, JOIN-04).
 
 Also pins JOIN-06 at the lookup (a stored profile that forces relaying never

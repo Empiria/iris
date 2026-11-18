@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Slug and vdo_room rules for meeting links.
 
 Loads on both sides (Skulpt in the browser, CPython on the server). Random

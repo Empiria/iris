@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """S2 and S3: a plain @anvil.server.route owns /<slug> and returns AppResponder.
 
 Two variants. route has a pathed Routing Route on /:slug as well as the plain

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The guard in tests/conftest.py, pinned with real pytest subprocesses.
 
 A collection hook cannot be tested honestly in-process, so these only collect.

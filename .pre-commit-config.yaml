@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 # Empiria Anvil pre-commit baseline. Copy to .pre-commit-config.yaml.
 #
 # ruff and ruff-format replace the black/isort/flake8 trio. If you are copying

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The /admin sign-in page on the local stack (ADMIN-01).
 
 Cold loads /admin, signs in with the dev accounts that `admin_login` and

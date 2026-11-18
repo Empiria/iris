@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Join a meeting from its link (JOIN-01, JOIN-04, JOIN-06, DEPL-01).
 
 Runs against the live local stack after `just seed`, which makes the room

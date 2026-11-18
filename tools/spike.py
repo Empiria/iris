@@ -1,4 +1,7 @@
 #!/usr/bin/env -S uv run --script
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["pyyaml>=6.0", "anvil-uplink>=0.7.1", "playwright==1.65.2"]

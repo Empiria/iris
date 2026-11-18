@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Client-side admin sign-in state for the /admin page.
 
 `state.status` is a reactive signal: None while unknown, then the dict that the

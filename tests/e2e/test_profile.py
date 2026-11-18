@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Edit the vdo.ninja profile on the admin page (ADMIN-05).
 
 Runs against the live local stack after `just seed`. The tests change the

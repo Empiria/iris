@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Contract tests for tools/spike.py, the Phase 2 spike runner.
 
 Only the runner's pure parts are tested here: the config merge, the app copy,

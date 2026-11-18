@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 Empiria
+ */
+
 /* Design tokens. Colours come from theme/parameters.yaml via %color:Name%;
    change them there, not here. */
 :root {

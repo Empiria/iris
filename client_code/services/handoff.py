@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """The one place that hands a person from Iris to the room.
 
 This module applies the recorded iframe decision (02-SPIKE-RESULTS.md). Browsers

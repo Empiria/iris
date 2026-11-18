@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """admin_status reports the caller's own sign-in state and nothing else."""
 
 import importlib

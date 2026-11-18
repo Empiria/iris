@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Keep the hermetic unit suite and the live (stack-backed) suites apart.
 
 tests/unit/conftest.py replaces the real `anvil` modules with stubs. Collecting

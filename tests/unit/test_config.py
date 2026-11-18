@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """anvil.yaml pins: sign-up off, and tables that clients cannot read.
 
 Failure messages name the key, never a secret value.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """vdo.ninja origin and join URL rules.
 
 This module imports nothing, so it runs in Skulpt and CPython alike and needs

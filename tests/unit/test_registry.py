@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """ADMIN-06 gate: every public entry point is named here, or it requires admin.
 
 The server never trusts the client, so each callable, server method and route

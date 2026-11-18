@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Create a permanent room on the admin page and join it (ADMIN-03, JOIN-02).
 
 Runs against the live local stack. Each test makes a room with a unique name,

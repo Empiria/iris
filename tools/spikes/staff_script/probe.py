@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """S7: can a script create the first staff user, and how do its inputs arrive?
 
 Scripts live in the top-level scripts/ directory. anvil-app-server 1.17.0 has no

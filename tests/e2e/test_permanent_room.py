@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Open a permanent room with its passphrase (JOIN-02, JOIN-03, JOIN-05).
 
 Runs against the live local stack after `just seed`, which makes the permanent

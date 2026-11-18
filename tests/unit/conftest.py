@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Stub the Anvil runtime so server modules import without a server.
 
 The stubs are installed unconditionally. Never wrap the install in a check for

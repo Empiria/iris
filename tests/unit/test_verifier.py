@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """server_code/verifier.py: slow hash and constant-time check of a passphrase."""
 
 import ast

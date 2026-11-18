@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """tools/stack_url.py: how the tools find the local stack, which has no fixed port."""
 
 import pytest

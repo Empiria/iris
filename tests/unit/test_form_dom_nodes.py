@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Every `self.dom_nodes["x"]` in form code has a matching `anvil:dom-node="x"`.
 
 In an HTML form template, only `anvil:dom-node` puts a plain element in

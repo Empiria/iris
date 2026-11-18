@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """`errors.user_message` reads the text of a server ValueError.
 
 The browser client gets a server ValueError as AnvilWrappedError, with the

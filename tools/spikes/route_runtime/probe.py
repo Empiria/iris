@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """S1: does a Routing Route with load_data serve /<slug> as a cold load?
 
 Four variants of the same app. The first three answer assumption A7 and declare

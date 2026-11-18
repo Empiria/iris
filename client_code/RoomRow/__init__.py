@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 from anvil.js import window
 
 from iris.services import links  # pyright: ignore[reportAttributeAccessIssue]

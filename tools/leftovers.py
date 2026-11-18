@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Empiria
+
 """Fail if anything left over from mini-app-starter has come back.
 
 Scans every tracked or unignored file. This file and the optional local
