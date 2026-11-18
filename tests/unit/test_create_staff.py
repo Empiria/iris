@@ -378,6 +378,25 @@ def test_launch_reports_a_failed_task_with_its_error(launcher):
     assert result == ("failed", "RuntimeError: a staff user already exists")
 
 
+class RaisingErrorTask(FakeTask):
+    """The uplink's get_error re-raises the task's exception instead of returning it."""
+
+    def get_error(self):
+        raise RuntimeError(self.error)
+
+
+def test_launch_reports_a_failure_when_get_error_raises(launcher):
+    task = RaisingErrorTask(["failed"], error="a staff user already exists")
+
+    result = launcher.launch_script(
+        FakeServer(task), "a@example.test", PASSWORD, 30, sleep=_no_sleep
+    )
+
+    assert result[0] == "failed"
+    assert "a staff user already exists" in result[1]
+    assert PASSWORD not in result[1]
+
+
 def test_launch_times_out(launcher):
     ticks = iter(range(0, 1000, 10))
     task = FakeTask([None])

@@ -97,7 +97,12 @@ def launch_script(
         sleep(POLL_S)
     if status == "completed":
         return "created", None
-    return "failed", _hide(task.get_error(), password)
+    try:
+        error = task.get_error()
+    except Exception as exc:
+        # The uplink's get_error re-raises the task's exception, not returns it.
+        error = exc
+    return "failed", _hide(error, password)
 
 
 def _is_staff(tables, email):
