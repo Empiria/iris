@@ -1,0 +1,28 @@
+<main class="iris-page">
+  <section class="iris-card" anvil:dom-node="loading_card">
+    <p class="iris-lede">Checking your session</p>
+  </section>
+  <section class="iris-card" anvil:dom-node="signin_card" hidden>
+    <h1 class="iris-heading">Staff sign-in</h1>
+    <form anvil:dom-node="signin_form" anvil:on-dom:submit="self._on_submit">
+      <label class="iris-field">Email
+        <input class="iris-input" type="email" autocomplete="username"
+               anvil:dom-node="email_input">
+      </label>
+      <label class="iris-field">Password
+        <input class="iris-input" type="password" autocomplete="current-password"
+               anvil:dom-node="password_input">
+      </label>
+      <p class="iris-message" role="alert" anvil:dom-node="signin_message" hidden></p>
+      <button type="submit" class="iris-button iris-button-primary"
+              anvil:dom-node="signin_button">Sign in</button>
+    </form>
+  </section>
+  <section class="iris-card" anvil:dom-node="signed_in_card" hidden>
+    <h1 class="iris-heading">Staff</h1>
+    <p class="iris-lede" anvil:dom-node="signed_in_as"></p>
+    <button type="button" class="iris-button" anvil:dom-node="signout_button"
+            anvil:on-dom:click="self._on_sign_out">Sign out</button>
+    <div anvil:dom-node="staff_tools"></div>
+  </section>
+</main>

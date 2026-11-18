@@ -57,3 +57,55 @@ a {
   margin: 0;
   color: var(--iris-muted);
 }
+
+/* Shared form primitives. Later pages reuse these. */
+[hidden] {
+  display: none !important;
+}
+
+.iris-field {
+  display: block;
+  margin: 0 0 var(--iris-space-4);
+}
+
+.iris-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: var(--iris-space-2);
+  padding: var(--iris-space-2);
+  border: 1px solid var(--iris-outline);
+  border-radius: var(--iris-radius);
+  background: var(--iris-background);
+  color: var(--iris-on-surface);
+  font: inherit;
+}
+
+.iris-button {
+  padding: var(--iris-space-2) var(--iris-space-4);
+  border: 1px solid var(--iris-outline);
+  border-radius: var(--iris-radius);
+  background: var(--iris-surface);
+  color: var(--iris-on-surface);
+  font: inherit;
+  cursor: pointer;
+}
+
+.iris-button:focus-visible,
+.iris-input:focus-visible {
+  outline: 3px solid var(--iris-primary);
+  outline-offset: 2px;
+}
+
+.iris-button-primary {
+  border-color: var(--iris-primary);
+  background: var(--iris-primary);
+  color: var(--iris-on-primary);
+}
+
+/* An error is carried by its wording and weight, not by colour alone. */
+.iris-message {
+  margin: var(--iris-space-4) 0;
+  color: var(--iris-on-surface);
+  font-weight: 700;
+}
