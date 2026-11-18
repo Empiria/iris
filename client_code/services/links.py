@@ -1,0 +1,51 @@
+"""Build the shareable link for a meeting slug.
+
+Loads on both sides (Skulpt in the browser, CPython on the server), so it has no
+server-only import and does no data access.
+"""
+
+from iris.services import slugs  # pyright: ignore[reportAttributeAccessIssue]
+
+# The value of the "Route owner:" line in 02-SPIKE-RESULTS.md (Decisions block).
+# One of "runtime" (a Routing route), "own" (an @anvil.server.route) or "query"
+# (/?m=<slug>). The first two give <base>/<slug>, "query" gives <base>/?m=<slug>.
+ROUTE_OWNER = "runtime"
+
+_PATH_OWNERS = ("runtime", "own")
+_OWNERS = _PATH_OWNERS + ("query",)
+_SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
+
+
+def link_for(base, slug, owner):
+    """The link for `slug` under `base`, shaped by who owns the route.
+
+    The slug is lower-cased and trimmed, then must be letters, digits or "-", so
+    plain concatenation is safe with no URL quoting.
+    """
+    if owner not in _OWNERS:
+        raise ValueError("Unknown route owner")
+    clean = slugs.normalise(slug)
+    if clean == "":
+        raise ValueError("Slug is empty")
+    for char in clean:
+        if char not in _SLUG_CHARS:
+            raise ValueError("Slug has a character that is not allowed")
+    root = str(base or "").rstrip("/")
+    if root == "":
+        raise ValueError("Base is empty")
+    if owner in _PATH_OWNERS:
+        return root + "/" + clean
+    return root + "/?m=" + clean
+
+
+def base_from_location(origin, pathname):
+    """The app root from a page location: the origin plus any app-key prefix.
+
+    Drops a trailing "/staff" and trailing slashes from the pathname, so
+    ("https://x.anvil.app", "/KEY/staff") gives "https://x.anvil.app/KEY".
+    """
+    path = str(pathname or "").rstrip("/")
+    if path == "/staff" or path.endswith("/staff"):
+        path = path[: -len("/staff")]
+    path = path.rstrip("/")
+    return str(origin or "").rstrip("/") + path
