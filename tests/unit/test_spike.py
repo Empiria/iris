@@ -3,9 +3,14 @@
 Only the runner's pure parts are tested here: the config merge, the app copy,
 the container command, the names and the result rows. Starting a container and
 running a probe needs the host stack, so those are left to `just spike`.
+
+The Phase 3 probes (crypto_derive, vdo_hash) get the same treatment: their pure
+helpers (the reference derivation, the vdo.ninja hash, the URL builders and the
+result-line checks) are tested here, and the browser parts are left to the probes.
 """
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -335,6 +340,8 @@ EXPECTED = {
     "schema_users",
     "iframe_matrix",
     "staff_script",
+    "crypto_derive",
+    "vdo_hash",
 }
 
 
@@ -355,3 +362,224 @@ def test_every_overlay_has_a_probe():
         funcs = {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}
         assert "NEEDS_STACK" in assigned, name
         assert "run" in funcs, name
+
+
+def _probe(spike, name):
+    return spike.load_probe(SPIKES / name)
+
+
+class TestVdoHashProbe:
+    @pytest.fixture
+    def probe(self, spike):
+        return _probe(spike, "vdo_hash")
+
+    def test_generate_hash_is_sha256_hex_cut_to_half_the_length_in_bytes(self, probe):
+        # sha256("abc") = ba7816bf 8f01cfea 414140de ...
+        assert probe.generate_hash("abc") == (
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        )
+        assert probe.generate_hash("abc", 16) == "ba7816bf8f01cfea"
+        assert probe.generate_hash("abc", 6) == "ba7816"
+        assert probe.generate_hash("abc", 4) == "ba78"
+
+    def test_room_id_hashes_room_password_salt_and_token(self, probe):
+        assert probe.room_id("r", "p", "s") == probe.generate_hash("rps", 16)
+        assert probe.room_id("r", "p", "s", "t") == probe.generate_hash("rpst", 16)
+
+    def test_the_salt_changes_the_room_id(self, probe):
+        assert probe.room_id("r", "p", "vdo.ninja") != probe.room_id("r", "p", "x")
+
+    def test_password_hash_is_the_start_of_the_six_character_hash(self, probe):
+        full = probe.generate_hash("secretvdo.ninja", 6)
+        assert probe.password_hash("secret", "vdo.ninja") == full[:4]
+        assert probe.password_hash("secret", "vdo.ninja", 6) == full
+
+    def test_a_random_room_is_prefixed_and_unique(self, probe):
+        a, b = probe.random_room(), probe.random_room()
+        assert a.startswith("irisspike")
+        assert a[len("irisspike") :].isalpha()
+        assert a != b
+
+    def test_url_with_the_password_in_the_query(self, probe):
+        url = probe.build_url("https://vdo.ninja/", "r1", "pw", join=False)
+        assert url == "https://vdo.ninja/?room=r1&password=pw"
+
+    def test_url_with_the_password_in_the_fragment(self, probe):
+        url = probe.build_url(
+            "https://vdo.ninja", "r1", "pw", password_in_fragment=True, join=False
+        )
+        assert url == "https://vdo.ninja/?room=r1#password=pw"
+
+    def test_url_with_salt_and_hash(self, probe):
+        url = probe.build_url("https://vdo.ninja", "r1", "pw", "s", "ab12", join=False)
+        assert url == "https://vdo.ninja/?room=r1&password=pw&salt=s&hash=ab12"
+
+    def test_a_joining_url_uses_the_fake_camera_params(self, probe):
+        url = probe.build_url("https://vdo.ninja", "r1")
+        assert url == "https://vdo.ninja/?room=r1&webcam&autostart&label=Spike"
+
+    def test_a_password_is_percent_encoded(self, probe):
+        url = probe.build_url("https://vdo.ninja", "r1", "a b&c", join=False)
+        assert url.endswith("password=a%20b%26c")
+
+    def test_room_ids_are_read_from_sent_frames(self, probe):
+        frames = [
+            '{"request":"joinroom","roomid":"0123456789abcdef"}',
+            '{"roomid": "0123456789abcdef"}',
+            '{"request":"ping"}',
+            '{"roomid":"fedcba9876543210"}',
+        ]
+        assert probe.room_ids_in(frames) == ["0123456789abcdef", "fedcba9876543210"]
+
+    def test_no_frames_means_no_room_ids(self, probe):
+        assert probe.room_ids_in([]) == []
+
+    def test_the_build_is_read_from_the_version_assignment(self, probe):
+        assert probe.build_of('session.version = "31.1"; // note') == "31.1"
+        assert probe.build_of("nothing here") is None
+
+    def test_a_result_line_is_one_line(self, probe):
+        assert probe.format_line("S2a", "PASS", "a\n  b") == "S2a PASS a b"
+
+    def test_the_proxy_credentials_are_split_out(self, probe, monkeypatch):
+        monkeypatch.setenv("HTTPS_PROXY", "http://user:pw@127.0.0.1:3128")
+        assert probe._proxy() == {
+            "server": "http://127.0.0.1:3128",
+            "username": "user",
+            "password": "pw",
+        }
+
+    def test_no_proxy_in_the_environment(self, probe, monkeypatch):
+        monkeypatch.delenv("HTTPS_PROXY", raising=False)
+        monkeypatch.delenv("HTTP_PROXY", raising=False)
+        assert probe._proxy() is None
+
+    def test_it_needs_no_stack(self, probe):
+        assert probe.NEEDS_STACK is False
+
+
+class TestCryptoDeriveProbe:
+    @pytest.fixture
+    def probe(self, spike):
+        return _probe(spike, "crypto_derive")
+
+    def test_the_reference_matches_the_rfc_7914_vector(self, probe):
+        # RFC 7914 section 11: PBKDF2-HMAC-SHA-256, P="passwd", S="salt", c=1.
+        # The first 32 bytes of its 64-byte output.
+        assert probe.reference_hex("passwd", "salt", 1) == (
+            "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc"
+        )
+
+    def test_the_fixed_inputs_have_a_pinned_reference(self, probe):
+        assert probe.reference_hex() == (
+            "9b1e78d56c5feb5a819a01cd18229723a6af007c036c3d4a8fbdf1479a52b482"
+        )
+
+    def test_it_needs_a_stack(self, probe):
+        assert probe.NEEDS_STACK is True
+
+    def test_fields_are_parsed_from_the_output_line(self, probe):
+        fields = probe.parse_fields("S1a hex=ab12 ms100000=250 ms600000=1500 DONE")
+        assert fields == {
+            "case": "S1a",
+            "hex": "ab12",
+            "ms100000": "250",
+            "ms600000": "1500",
+        }
+
+    def test_a_value_may_contain_an_equals_sign(self, probe):
+        assert probe.parse_fields("S1b call_js=err:a=b")["call_js"] == "err:a=b"
+
+    def test_timings_are_keyed_by_iterations(self, probe):
+        fields = probe.parse_fields("S3 ms100000=40 ms300000=120 error=x")
+        assert probe.timings(fields) == {100000: 40, 300000: 120}
+
+    def test_s1a_passes_on_the_reference_hex_with_timings(self, probe):
+        fields = {"hex": "aa", "ms100000": "5"}
+        assert probe.check_s1a(fields, "aa")[0] == "PASS"
+
+    def test_s1a_fails_on_a_wrong_hex(self, probe):
+        fields = {"hex": "bb", "ms100000": "5"}
+        assert probe.check_s1a(fields, "aa")[0] == "FAIL"
+
+    def test_s1a_fails_with_no_hex(self, probe):
+        verdict, evidence = probe.check_s1a({"hex_error": "TypeError"}, "aa")
+        assert verdict == "FAIL"
+        assert "TypeError" in evidence
+
+    def test_s1b_names_which_route_worked(self, probe):
+        fields = {"call_js": "err:x", "window": "ok", "hex": "aa", "via": "window"}
+        verdict, evidence = probe.check_s1b(fields, "aa")
+        assert verdict == "PASS"
+        assert "['window']" in evidence
+
+    def test_s1b_fails_when_neither_route_worked(self, probe):
+        fields = {"call_js": "err:x", "window": "err:y"}
+        assert probe.check_s1b(fields, "aa")[0] == "FAIL"
+
+    def test_s1c_needs_every_result_to_match(self, probe):
+        assert probe.check_s1c({"anvil_js": "aa", "call_js": "aa"}, "aa")[0] == "PASS"
+        assert probe.check_s1c({"anvil_js": "aa", "call_js": "bb"}, "aa")[0] == "FAIL"
+
+    def test_s1c_fails_with_no_result(self, probe):
+        assert probe.check_s1c({"anvil_js_error": "x"}, "aa")[0] == "FAIL"
+
+    def test_s3_needs_all_three_timings(self, probe):
+        ok = {"ms100000": "1", "ms300000": "3", "ms600000": "6"}
+        assert probe.check_s3(ok)[0] == "PASS"
+        assert probe.check_s3({"ms100000": "1"})[0] == "FAIL"
+
+    def test_a_result_line_is_one_line(self, probe):
+        assert probe.format_line("S1a", "FAIL", "a\nb") == "S1a FAIL a b"
+
+
+class TestCryptoDeriveOverlay:
+    OVERLAY = SPIKES / "crypto_derive" / "app"
+    FORM = OVERLAY / "client_code" / "DeriveSpike"
+
+    def test_every_dom_node_lookup_is_in_the_template(self):
+        code = (self.FORM / "__init__.py").read_text(encoding="utf-8")
+        template = (self.FORM / "form_template.html").read_text(encoding="utf-8")
+        looked_up = set(re.findall(r"""dom_nodes\[\s*["']([^"']+)["']""", code))
+        declared = set(
+            re.findall(r"""anvil:dom-node\s*=\s*["']([^"']+)["']""", template)
+        )
+        assert looked_up
+        assert looked_up <= declared
+
+    def test_every_button_handler_exists(self):
+        code = (self.FORM / "__init__.py").read_text(encoding="utf-8")
+        template = (self.FORM / "form_template.html").read_text(encoding="utf-8")
+        handlers = re.findall(r"anvil:on-dom:click=\"self\.(\w+)\"", template)
+        assert len(handlers) == 4
+        for name in handlers:
+            assert f"def {name}(" in code
+
+    def test_the_template_defines_the_function_call_js_uses(self):
+        template = (self.FORM / "form_template.html").read_text(encoding="utf-8")
+        code = (self.FORM / "__init__.py").read_text(encoding="utf-8")
+        assert "window.irisDerive = async function" in template
+        assert 'call_js("irisDerive"' in code
+
+    def test_the_server_timing_callable_times_each_count(self, monkeypatch):
+        import importlib.util
+
+        path = self.OVERLAY / "server_code" / "spike_kdf.py"
+        spec = importlib.util.spec_from_file_location("spike_kdf_under_test", path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        monkeypatch.setattr(module, "ITERATIONS", (10, 20, 30))
+        timings = module.spike_kdf_timing()
+        assert list(timings) == ["10", "20", "30"]
+        assert all(isinstance(v, float) and v >= 0 for v in timings.values())
+
+    def test_the_server_timing_defaults_are_100k_300k_600k(self):
+        import importlib.util
+
+        path = self.OVERLAY / "server_code" / "spike_kdf.py"
+        spec = importlib.util.spec_from_file_location("spike_kdf_defaults", path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert module.ITERATIONS == (100_000, 300_000, 600_000)

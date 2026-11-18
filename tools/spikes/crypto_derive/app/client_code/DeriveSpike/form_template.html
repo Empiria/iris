@@ -1,0 +1,28 @@
+<main class="iris-page">
+  <section class="iris-card">
+    <h1 class="iris-heading">Derive spike</h1>
+    <p class="iris-lede">
+      Passphrase spike-pass-1234, salt iris:spike. The buttons run PBKDF2-SHA-256
+      in the browser through anvil.js (S1a) and through call_js (S1b), compare
+      both at 1000 iterations (S1c), and ask the server to time its own (S3).
+    </p>
+    <button type="button" anvil:on-dom:click="self._s1a_click">S1a anvil.js</button>
+    <button type="button" anvil:on-dom:click="self._s1b_click">S1b call_js</button>
+    <button type="button" anvil:on-dom:click="self._s1c_click">S1c both</button>
+    <button type="button" anvil:on-dom:click="self._s3_click">S3 server</button>
+    <pre anvil:dom-node="out">Ready</pre>
+    <script>
+      window.irisDerive = async function (pass, salt, iterations) {
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          "raw", enc.encode(pass), "PBKDF2", false, ["deriveBits"]);
+        const bits = await crypto.subtle.deriveBits(
+          { name: "PBKDF2", hash: "SHA-256", salt: enc.encode(salt),
+            iterations: iterations },
+          key, 256);
+        return Array.from(new Uint8Array(bits))
+          .map((b) => b.toString(16).padStart(2, "0")).join("");
+      };
+    </script>
+  </section>
+</main>
