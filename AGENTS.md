@@ -36,7 +36,7 @@ Dependencies (in `anvil.yaml`): `routing` v0.7.0 and `anvil-reactive` v0.1.4 (re
 
 ## Remotes
 
-There are no pull requests. Work is merged to `main`, and `main` is pushed to `origin` and to `production`. `production` is the live Anvil app, so agents never push to it. The lead does that.
+The maintainer's own work is merged straight to `main` with no pull request (outside contributions arrive as pull requests, which the maintainer merges). Work is merged to `main`, and `main` is pushed to `origin` and to `production`. `production` is the live Anvil app, so agents never push to it. The lead does that.
 
 ## Runtime constraints
 

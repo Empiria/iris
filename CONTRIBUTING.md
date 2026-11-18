@@ -15,7 +15,8 @@ just setup    # once per clone: git hooks, tools, Playwright chromium
 just verify   # lint, format check, type-check, anvil validate, leftovers, SPDX, unit tests
 ```
 
-`just verify` is the gate before you send a change, and CI runs it. The browser
+`just verify` is the gate before you send a change, and CI runs it. Outside
+contributions arrive as pull requests, and the maintainer merges them to `main`. The browser
 tests (`just e2e`) need the local podman stack; see the README's
 [Local development](README.md#local-development).
 
