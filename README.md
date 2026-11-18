@@ -15,8 +15,9 @@ install, no long URL.
   once (for example sharp screen sharing, AV1 first) and every call uses it.
 - **Works well across browsers.** The room opens inside the Iris page where
   that is smooth, and hands off straight to VDO.Ninja where that is better.
-- **Self-hostable.** [Anvil](https://anvil.works) app, Python on both client
-  and server, no local build step. Nothing specific to Empiria lives in the
+- **Self-hostable.** An [Anvil](https://anvil.works) app, Python on both client
+  and server, no local build step. Run it on anvil.works, or on your own server
+  with the open-source anvil-app-server. Nothing specific to Empiria lives in the
   code, so anyone can run their own copy.
 
 > **Read the story:** [Why I use VDO Ninja for video calling and screen
@@ -37,7 +38,7 @@ never sees the query string.
 
 Staff open the app root (`/`; `/staff` is an alias) and sign in with an email
 and password. Sign-up is off: staff accounts are created by an administrator
-(see [Create the first staff user](#create-the-first-staff-user)). A signed-in
+(see [Install](#install)). A signed-in
 member of staff can give a link an optional title and create it. The link is
 copied to the clipboard, and can be copied again from the page.
 
@@ -102,12 +103,20 @@ VDO.Ninja hashes room names with the host it is served from, so changing
 
 ## Install
 
-You need an Anvil account. The steps below create your own copy of the app.
+Iris is an Anvil app, and Anvil apps run in two places. Pick whichever suits
+you: no Anvil account is needed for the second.
 
-1. **Create the app from this repo.** Clone it, then either create a new Anvil
-   app from the git repo, or run it yourself on
-   [anvil-app-server](https://github.com/anvil-works/anvil-runtime) (the local
-   stack below does this).
+| | Hosted on anvil.works | Self-hosted with anvil-app-server |
+|---|---|---|
+| Needs | An [Anvil](https://anvil.works) account | A machine that can run the open-source [anvil-app-server](https://github.com/anvil-works/anvil-runtime) (Java and Python 3.10, or a container) |
+| Looks after | Anvil runs, backs up and serves the app | You run it, keep its database and put TLS in front |
+| Status here | Follows Anvil's documented steps, not re-run for this README | The local stack is exercised by the tests. A production deployment has not been tried |
+
+Either way, start by cloning this repo.
+
+### Route A: hosted on anvil.works
+
+1. **Create the app from this repo.** Create a new Anvil app from the git repo.
 2. **Add the dependencies.** In the Anvil editor, Settings → Dependencies →
    "Add Dependency" for each of these. Dependency ids are generated per app, so
    they can't be copied from `anvil.yaml` into another app.
@@ -121,28 +130,75 @@ You need an Anvil account. The steps below create your own copy of the app.
    created them, so a fork or fresh deployment has the secret names but not the
    values. Re-enter them in your own app. Iris needs `iris_staff_email`, and
    optionally `iris_staff_password`, for the next step.
-5. **Create the first staff user** (below).
+5. **Create the first staff user.** Sign-up is off, and a browser can't run a
+   script, so `scripts/CreateStaff.py` is the only way the first staff account
+   comes to exist. It refuses to run once any staff user exists. Press Run on
+   `CreateStaff` in the Anvil editor and read its output, then delete the
+   password secret. With no password set, a random one is generated and printed
+   once, on a line `generated password: ...`.
 6. **Set the profile.** Add `vdo_profile` (and, if you host VDO.Ninja yourself,
    `vdo_origin`) rows to the `setting` table.
 7. **Custom domain.** Point your domain at the app using Anvil's custom domain
-   settings. Meeting links are always cold visits to `/<slug>`. Check a cold load of
-   `/<slug>` on your own domain once it is set up (see
+   settings. Meeting links are always cold visits to `/<slug>`, so check a cold
+   load of `/<slug>` on your own domain once it is set up (see
    [Status and known limits](#status-and-known-limits)).
 
-### Create the first staff user
+### Route B: self-hosted with anvil-app-server
 
-Sign-up is off, and a browser can't run a script, so `scripts/CreateStaff.py` is
-the only way the first staff account comes to exist. It refuses to run once any
-staff user exists.
+You do not need an Anvil account. This repo's local stack is a working example
+of the runtime configuration; `Containerfile` and `justfile` are the reference.
 
-On a hosted app: set the `iris_staff_email` secret and, if you want to choose
-the password, `iris_staff_password`. Press Run on `CreateStaff` in the Anvil
-editor and read its output, then delete the password secret. With no password
-set, a random one is generated and printed once, on a line
-`generated password: ...`.
+**What the local stack does (exercised).** `just build` fetches the dependency
+apps from their public GitHub repos at the tags pinned in `anvil.yaml` (no login)
+and builds an image with `anvil-app-server` 1.17.0. `just up` runs it with:
 
-Locally: `just create-staff --dev`, or `just create-staff you@example.com`. A
-generated password is in `just logs`.
+- `--app /srv/<package_name>`: the app, mounted read-only from this checkout.
+- `--dep-id <id>=<package>` for each dependency, printed by
+  `uv run --script tools/anvil_deps.py --dep-id-args`. The dependency apps sit
+  beside the app in `/srv`, and the ids come from `anvil.yaml`, so there is
+  nothing to add by hand and no editor step. After a dependency or
+  `package_name` change, run `just fresh` to regenerate the flags.
+- `--data-dir /data` on a named volume, so the embedded database survives
+  restarts. `just down` and `just up` keep the data; `just fresh` discards it.
+- `--auto-migrate` and `--ignore-invalid-schema`: the first boot against an empty
+  volume creates the Data Tables schema from `anvil.yaml`, so there is no
+  resolve step as there is on anvil.works.
+- `--origin http://localhost:<port>` and `--port 3030`: the origin must be the
+  URL the browser uses, or the page loads its assets and websocket from the wrong
+  place.
+- `--uplink-key`, a fixed development value.
+
+Server modules run in the image's Python 3.10, and packages in
+`server_code/requirements.txt` are installed into the image. The first admin is
+created with `just create-staff --dev` or `just create-staff you@example.com`,
+which launches `scripts/CreateStaff.py` over the uplink (a generated password is
+in `just logs`). Then add the `vdo_profile` (and optionally `vdo_origin`) rows
+to the `setting` table.
+
+**Taking it to production (not yet tried).** The pieces below follow from the
+flags above, but nobody has run Iris on a production self-hosted server yet, so
+treat this as a starting point and test it:
+
+- **Don't reuse the dev image as it is.** `Containerfile` bakes in the well-known
+  `dev-uplink` key and is meant for loopback only. Use your own key and don't
+  publish the port beyond the machine.
+- **TLS and a domain.** Put a reverse proxy (Caddy, nginx or similar) in front,
+  terminating TLS on your domain, with websocket support, and set `--origin` to
+  the public `https://` URL.
+- **Keep the database volume** and back it up. Without it the Data Tables, users
+  and links are gone.
+- **First admin.** `scripts/CreateStaff.py` reads `IRIS_STAFF_EMAIL` and
+  `IRIS_STAFF_PASSWORD` from the environment as well as from launch arguments
+  and Anvil secrets. `tools/create_staff.py` accepts `IRIS_UPLINK_URL` and
+  `IRIS_UPLINK_KEY`, but only for a `ws://` URL on `localhost` or `127.0.0.1`,
+  so run it on the server itself, or through an SSH tunnel. This path hasn't been
+  tested against a non-development server.
+- **Secrets.** Iris itself reads secrets only in `CreateStaff`, and that script
+  falls back to environment variables, so a self-hosted deployment can start
+  without any. Whether the app-server's secrets service meets your needs for
+  anything you add is untested.
+- **Cold loads.** Check a cold load of `/<slug>` on your own domain (see
+  [Status and known limits](#status-and-known-limits)).
 
 ## Local development
 
@@ -205,8 +261,12 @@ a waiting room are outside v1.
 
 **Known limits:**
 
-- A cold load of `/<slug>` has been verified on the local stack. Check it on
-  your own custom domain on a hosted app before you rely on it.
+- A cold load of `/<slug>` has been verified on the local stack
+  (anvil-app-server). Check it on your own domain, hosted or self-hosted, before
+  you rely on it.
+- Self-hosting is exercised only as the local development stack. Running
+  anvil-app-server in production (TLS, your own uplink key, backups) has not been
+  tried.
 - Safari on iOS and in-app browsers are redirected rather than embedded, because
   the iframe behaviour there has not been tested.
 - There is no settings page yet: edit the `setting` rows in the Data Tables
