@@ -1,4 +1,5 @@
-<main class="iris-page">
+<div>
+<main class="iris-page" anvil:dom-node="join_main">
   <section class="iris-card" anvil:dom-node="loading_card">
     <p class="iris-lede">Opening your meeting</p>
   </section>
@@ -24,3 +25,7 @@
     <p class="iris-lede">Try again in a moment, or ask your host for help.</p>
   </section>
 </main>
+<div class="iris-frame-shell" anvil:dom-node="frame_shell" hidden>
+  <anvil-component name="meeting_frame" type="form:MeetingFrame"></anvil-component>
+</div>
+</div>

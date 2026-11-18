@@ -61,7 +61,12 @@ class Join(JoinTemplate):
         button = self.dom_nodes["join_button"]
         button.disabled = True
         try:
-            handoff.start(join.join_url(self.found, name))
+            # Same call stack as the click, so the frame is made by a user gesture.
+            how = handoff.start(join.join_url(self.found, name), self.meeting_frame)
         except ValueError:
             self._show_message(NOT_SET_UP_MESSAGE)
             button.disabled = False
+            return
+        if how == "iframe":
+            self.dom_nodes["join_main"].hidden = True
+            self.dom_nodes["frame_shell"].hidden = False
