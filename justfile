@@ -14,8 +14,9 @@ stack_retries := env_var_or_default("IRIS_STACK_RETRIES", "30")
 # How long host-check waits for a booting stack to answer 200, in seconds.
 boot_timeout := env_var_or_default("IRIS_BOOT_TIMEOUT", "600")
 
-# The app's package_name (anvil.yaml). The app is mounted at /srv/<package>.
-package := "app"
+# The app's package_name, read from anvil.yaml so an IDE rename needs no edit
+# here. The app is mounted at /srv/<package>.
+package := `sed -n 's/^package_name: *//p' anvil.yaml`
 img := "iris-anvil-dev"
 ctr := "iris-anvil"
 vol := "iris-anvil-data"
@@ -123,10 +124,11 @@ up: (_need-podman "up")
     else
         # Loopback only: the dev uplink key must not be reachable from the network.
         # The --dep-id flags come from anvil.yaml, so ids are never typed twice.
-        # After a dep_id change in anvil.yaml, run `just fresh`.
+        # After a package_name or dep_id change in anvil.yaml, run `just fresh`.
+        [ -n "{{ package }}" ] || { echo "up: no package_name in anvil.yaml"; exit 1; }
         podman run -d --name {{ ctr }} -p 127.0.0.1:3030:3030 \
             -v "{{ justfile_directory() }}:/srv/{{ package }}:ro,z" -v {{ vol }}:/data \
-            {{ img }} $(uv run --script tools/anvil_deps.py --dep-id-args)
+            {{ img }} --app /srv/{{ package }} $(uv run --script tools/anvil_deps.py --dep-id-args)
     fi
 
 # [host] Stop the stack.
@@ -238,9 +240,10 @@ host-check: (_need-podman "host-check")
     echo "$listen"
     if grep -qE '(0\.0\.0\.0|\[::\]|\*):3030' <<<"$listen"; then fail "port 3030 listens beyond loopback"; fi
 
-    begin "the server got the dependency ids from anvil.yaml"
+    begin "the server got the app path and dependency ids from anvil.yaml"
     cmd="$(podman inspect {{ ctr }} --format '{{{{json .Config.Cmd}}')"
     echo "$cmd"
+    grep -qF '"--app","/srv/{{ package }}"' <<<"$cmd" || fail "the server command lacks --app /srv/{{ package }}"
     dep_args="$(uv run --script tools/anvil_deps.py --dep-id-args)"
     [ -n "$dep_args" ] || fail "anvil_deps.py --dep-id-args printed nothing"
     for arg in $dep_args; do

@@ -24,7 +24,7 @@ max-complexity = 10
 
 [lint.isort]
 known-third-party = ["anvil"]
-known-first-party = ["app"]
+known-first-party = ["iris"]
 
 [lint.per-file-ignores]
 # Two runtime floors these autofixes would breach. PEP 585 builtin generics

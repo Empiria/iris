@@ -10,7 +10,7 @@ Iris is an [Anvil](https://anvil.works) app: Python on both client and server, w
 
 ## Layout
 
-- `anvil.yaml`: app config. `package_name` is `app`, startup is the `startup` module, and the services are Data Tables and Secrets.
+- `anvil.yaml`: app config. `package_name` is `iris`, startup is the `startup` module, and the services are Data Tables and Secrets.
 - `client_code/startup.py`: entry point. It launches the session, which starts the router.
 - `client_code/globals.py`: the `session` object (router lifecycle).
 - `client_code/services/routes.py`: route classes for the `routing` dependency.
@@ -38,10 +38,10 @@ There are no pull requests. Work is merged to `main`, and `main` is pushed to `o
 
 ## Imports
 
-- The top-level package is `app` (the `package_name`): `from app.services import routes`.
+- The top-level package is `iris` (the `package_name`): `from iris.services import routes`.
 - Never write `from client_code.X` or `from server_code.X`. Neither is a real package, so the import always fails.
 - Client code can't import server modules. On the server, both trees are flattened into one namespace, so server modules can import client modules as siblings.
-- Inside `@anvil.server.server_method` bodies, import server-only modules within the method, using the absolute `from app.X` form.
+- Inside `@anvil.server.server_method` bodies, import server-only modules within the method, using the absolute `from iris.X` form.
 - Import dependency submodules by their full path, e.g. `from anvil_reactive.main import signal`.
 
 ## Architecture rules
@@ -113,7 +113,8 @@ Sandbox reach of the host stack: not reachable. On 2026-11-18, a direct `curl ht
 
 Host results, 2026-11-18, `just host-check` on podman 6.2.0: `just build` took 2 s with a warm cache, and a cold boot on a clean database answered 200 in 9 s. The port is published on `127.0.0.1:3030` only. The four `--dep-id` flags match `anvil.yaml`, and the runtime user finds the baked-in app-server JAR with no download. `just seed` prints `seed: uplink round trip ok (ping -> pong)` twice. `just e2e` passes, before and after `just fresh`. The HelloWorld `show` handler fires. The first run failed at `e2e` with `KeyError: server_status`, because the page used `anvil:name` where it needed `anvil:dom-node` (see Forms and theming). After the fix, the host run passed.
 
-- After a dependency change in the IDE, run `just fresh` so the `--dep-id` flags are regenerated.
+- After a dependency or `package_name` change in the IDE, run `just fresh` so the `--dep-id` and `--app` flags are regenerated. The justfile reads `package_name` from `anvil.yaml`, so a rename needs no edit there.
+- An IDE save can drop the executable bit from files under `tools/`. Always run them through `uv run --script` (or `python3`), never as `./tools/x.py`.
 - `IRIS_STACK_RETRIES` raises how long `seed` and `e2e` wait for a slow first boot (default 30 tries, 2 s apart).
 - A client error shows in `just logs` as `Error report from client code:` with a traceback.
 

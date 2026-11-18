@@ -9,7 +9,7 @@ to run their own instance.
 ## Layout
 
 - `anvil.yaml`: app config (dependencies, services, startup module)
-- `client_code/`: forms and client modules, imported as `app.*`
+- `client_code/`: forms and client modules, imported as `iris.*`
 - `server_code/`: server modules and `requirements.txt`
 - `theme/`: theme assets and parameters
 

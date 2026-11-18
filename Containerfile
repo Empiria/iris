@@ -36,17 +36,18 @@ USER app
 WORKDIR /srv
 
 # Dependency apps staged by `just build`. Each directory is named after its
-# package_name so the app server finds it as a sibling of /srv/app.
+# package_name so the app server finds it as a sibling of the app itself.
 COPY --chown=app:app deps/ /srv/
 
 EXPOSE 3030
 
-# The app itself is bind-mounted at /srv/app by `just up`.
-# The --dep-id flags are not listed here: `just up` appends them after the image
-# name, from `tools/anvil_deps.py --dep-id-args`, so they always come from
-# anvil.yaml. After any dependency change in the IDE, recreate the container
+# The app itself is bind-mounted at /srv/<package_name> by `just up`.
+# Neither --app nor the --dep-id flags are listed here: `just up` appends them
+# after the image name, the path from the app's package_name and the ids from
+# `tools/anvil_deps.py --dep-id-args`, so they always come from anvil.yaml.
+# After a package_name or dependency change in the IDE, recreate the container
 # with `just fresh`.
 # --auto-migrate creates the schema from anvil.yaml on the first boot against an
 # empty volume. --ignore-invalid-schema keeps restarts safe: an index the local
 # migrator can't build would otherwise crash every boot after the first.
-ENTRYPOINT ["anvil-app-server", "--app", "/srv/app", "--data-dir", "/data", "--auto-migrate", "--ignore-invalid-schema", "--uplink-key", "dev-uplink"]
+ENTRYPOINT ["anvil-app-server", "--data-dir", "/data", "--auto-migrate", "--ignore-invalid-schema", "--uplink-key", "dev-uplink"]

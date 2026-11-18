@@ -3,7 +3,7 @@ from routing import router
 
 class HomeRoute(router.Route):
     path = "/"
-    form = "app.HelloWorld"
+    form = "iris.HelloWorld"
 
     def meta(self, **kwargs):
         return {"title": "Iris"}
