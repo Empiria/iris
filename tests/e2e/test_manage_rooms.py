@@ -65,9 +65,12 @@ def _create_one_off(page: Page, title: str, made_slugs: list):
     """Create a one-off link through the page and return its slug."""
     page.get_by_label("One-off link").check()
     page.get_by_label("Meeting name (optional)").fill(title)
-    page.get_by_role("button", name="Create link").click()
     link = page.get_by_label("Meeting link")
+    # The field can still hold the last room's link, so wait for a new one.
+    before = link.input_value() if link.count() else ""
+    page.get_by_role("button", name="Create link").click()
     expect(link).to_have_value(re.compile("[a-z0-9]{8}$"), timeout=VISIBLE_MS)
+    expect(link).not_to_have_value(before, timeout=VISIBLE_MS)
     slug = re.split("[/=]", link.input_value())[-1]
     made_slugs.append(slug)
     return slug

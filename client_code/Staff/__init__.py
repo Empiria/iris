@@ -3,6 +3,7 @@ from anvil.js import window
 from anvil_reactive.main import render_effect
 
 from iris.services import (
+    errors,  # pyright: ignore[reportAttributeAccessIssue]
     links,  # pyright: ignore[reportAttributeAccessIssue]
     permissions,  # pyright: ignore[reportAttributeAccessIssue]
     staff_session,  # pyright: ignore[reportAttributeAccessIssue]
@@ -166,15 +167,16 @@ class Staff(StaffTemplate):
         except permissions.PermissionDenied:
             self._show_create_message(_SIGNED_OUT_TEXT)
             staff_session.refresh()
-        except ValueError as error:
+        except Exception as error:
             # A room name that is taken, reserved or badly formed: the server's
             # message is written for the person who typed it.
-            self._show_create_message(str(error))
-        except Exception:
             self._show_create_message(
-                "Could not create the room. Try again."
-                if permanent
-                else "Could not create the link. Try again."
+                errors.user_message(error)
+                or (
+                    "Could not create the room. Try again."
+                    if permanent
+                    else "Could not create the link. Try again."
+                )
             )
         finally:
             button.disabled = False
@@ -223,10 +225,10 @@ class Staff(StaffTemplate):
         except permissions.PermissionDenied:
             self._show_profile_message("You are not signed in as staff.")
             staff_session.refresh()
-        except ValueError as error:
-            self._show_profile_message(str(error))
-        except Exception:
-            self._show_profile_message("Could not save the settings. Try again.")
+        except Exception as error:
+            self._show_profile_message(
+                errors.user_message(error) or "Could not save the settings. Try again."
+            )
         finally:
             button.disabled = False
 
@@ -265,13 +267,13 @@ class Staff(StaffTemplate):
         except permissions.PermissionDenied:
             self._show_rooms_message(_SIGNED_OUT_TEXT)
             staff_session.refresh()
-        except ValueError as error:
+        except Exception as error:
             # An unknown room or a refused title: written for the person who
             # asked. The list may be stale, so it is loaded again.
-            self._show_rooms_message(str(error))
-            self._load_rooms()
-        except Exception:
-            self._show_rooms_message("Could not change the room. Try again.")
+            message = errors.user_message(error)
+            self._show_rooms_message(message or "Could not change the room. Try again.")
+            if message:
+                self._load_rooms()
         return None
 
     def _on_row_edit(self, slug=None, title="", **event_args):
