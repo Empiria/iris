@@ -197,3 +197,49 @@ a {
   height: 100dvh;
   border: 0;
 }
+
+/* The rooms list on the admin page. */
+.iris-room-list {
+  margin: var(--iris-space-4) 0;
+}
+
+.iris-room {
+  padding: var(--iris-space-4) 0;
+  border-top: 1px solid var(--iris-outline);
+}
+
+.iris-room-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--iris-space-2);
+}
+
+.iris-room-link {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.iris-badge {
+  padding: 0 var(--iris-space-2);
+  border: 1px solid var(--iris-outline);
+  border-radius: var(--iris-radius);
+  color: var(--iris-muted);
+  font-size: 0.875rem;
+}
+
+.iris-room-title {
+  margin: var(--iris-space-2) 0 0;
+}
+
+.iris-room-meta {
+  margin: 0 0 var(--iris-space-2);
+  color: var(--iris-muted);
+  font-size: 0.875rem;
+}
+
+.iris-room-actions .iris-button,
+.iris-room-edit .iris-button,
+.iris-room-confirm .iris-button {
+  margin: 0 var(--iris-space-2) var(--iris-space-2) 0;
+}

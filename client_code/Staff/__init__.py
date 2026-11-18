@@ -10,14 +10,22 @@ from iris.services import (
 
 from ._anvil_designer import StaffTemplate
 
+# The wording the page already uses when a call is refused.
+_SIGNED_OUT_TEXT = "You are not signed in as staff."
+
 
 class Staff(StaffTemplate):
     # A class default, so the render effect can read it however early it first runs.
     _profile_loaded = False
+    _rooms_loaded = False
 
     def __init__(self, **properties):
         self.init_components(**properties)
         self._profile_loaded = False
+        self._rooms_loaded = False
+        self.rooms_panel.add_event_handler("x-edit", self._on_row_edit)
+        self.rooms_panel.add_event_handler("x-rotate", self._on_row_rotate)
+        self.rooms_panel.add_event_handler("x-delete", self._on_row_delete)
         self.add_event_handler("show", self.form_show)
         self.add_event_handler("hide", self.form_hide)
 
@@ -26,7 +34,7 @@ class Staff(StaffTemplate):
             staff_session.refresh()
 
     def form_hide(self, **event_args):
-        # Leaving the page drops the passphrase from it.
+        # Leaving the page drops the passphrases from it.
         self._clear_passphrase()
 
     @render_effect
@@ -44,6 +52,9 @@ class Staff(StaffTemplate):
             if not self._profile_loaded:
                 self._profile_loaded = True
                 self._load_profile()
+            if not self._rooms_loaded:
+                self._rooms_loaded = True
+                self._load_rooms()
         else:
             # Signed out: drop the saved text from the page, and load it again
             # the next time a staff member signs in.
@@ -51,6 +62,8 @@ class Staff(StaffTemplate):
             self.dom_nodes["profile_input"].value = ""
             self._show_profile_message("")
             self._clear_passphrase()
+            self._rooms_loaded = False
+            self._clear_rooms()
 
     def _show_message(self, text):
         message = self.dom_nodes["signin_message"]
@@ -149,8 +162,9 @@ class Staff(StaffTemplate):
         button.disabled = True
         try:
             self._show_created(self._create(permanent, title), permanent)
+            self._load_rooms()
         except permissions.PermissionDenied:
-            self._show_create_message("You are not signed in as staff.")
+            self._show_create_message(_SIGNED_OUT_TEXT)
             staff_session.refresh()
         except ValueError as error:
             # A room name that is taken, reserved or badly formed: the server's
@@ -215,3 +229,76 @@ class Staff(StaffTemplate):
             self._show_profile_message("Could not save the settings. Try again.")
         finally:
             button.disabled = False
+
+    def _show_rooms_message(self, text):
+        message = self.dom_nodes["rooms_message"]
+        message.textContent = text
+        message.hidden = text == ""
+
+    def _clear_rooms(self):
+        """Drop the list and any passphrase from the page, when signed out."""
+        self.rooms_panel.items = []
+        self.dom_nodes["rooms_empty"].hidden = True
+        self._show_rooms_message("")
+
+    def _load_rooms(self):
+        try:
+            rooms = anvil.server.call("list_rooms")
+        except permissions.PermissionDenied:
+            # Not a refresh: this can run inside the render effect.
+            self._show_rooms_message(_SIGNED_OUT_TEXT)
+        except Exception:
+            self._show_rooms_message("Could not load the rooms. Reload the page.")
+        else:
+            self.rooms_panel.items = rooms
+            self.dom_nodes["rooms_empty"].hidden = len(rooms) > 0
+
+    def _room_action(self, name, *args):
+        """Call the server for one room action, or show why it did not work.
+
+        Returns the reply, or None after the reason is on the page.
+        """
+        self._show_rooms_message("")
+        self._clear_passphrase()
+        try:
+            return anvil.server.call(name, *args)
+        except permissions.PermissionDenied:
+            self._show_rooms_message(_SIGNED_OUT_TEXT)
+            staff_session.refresh()
+        except ValueError as error:
+            # An unknown room or a refused title: written for the person who
+            # asked. The list may be stale, so it is loaded again.
+            self._show_rooms_message(str(error))
+            self._load_rooms()
+        except Exception:
+            self._show_rooms_message("Could not change the room. Try again.")
+        return None
+
+    def _on_row_edit(self, slug=None, title="", **event_args):
+        if self._room_action("update_room", slug, title) is not None:
+            self._load_rooms()
+
+    def _on_row_delete(self, slug=None, **event_args):
+        if self._room_action("delete_room", slug) is not None:
+            self._load_rooms()
+
+    def _on_row_rotate(self, slug=None, **event_args):
+        result = self._room_action("rotate_passphrase", slug)
+        if result is None:
+            return
+        # The new passphrase goes in the same box a new room's passphrase uses,
+        # with that room's link, and is cleared the same ways.
+        base = links.base_from_location(
+            window.location.origin, window.location.pathname
+        )
+        link = links.link_for(base, result["slug"], links.ROUTE_OWNER)
+        self.dom_nodes["link_output"].value = link
+        self._show_copy_message("")
+        self.dom_nodes["passphrase_output"].value = str(result["passphrase"])
+        self.dom_nodes["passphrase_box"].hidden = False
+        self.dom_nodes["result_box"].hidden = False
+        self._show_rooms_message(
+            "New passphrase for " + str(result["slug"]) + " is in the box above."
+        )
+        self.dom_nodes["result_box"].scrollIntoView()
+        self._load_rooms()

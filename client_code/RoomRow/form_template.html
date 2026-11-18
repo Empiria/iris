@@ -1,0 +1,41 @@
+---
+custom_component: true
+---
+<div class="iris-room" anvil:dom-node="room_item">
+  <div class="iris-room-head">
+    <a class="iris-room-link" href="#" anvil:dom-node="room_link"></a>
+    <span class="iris-badge" anvil:dom-node="room_kind"></span>
+  </div>
+  <p class="iris-room-title" anvil:dom-node="room_title"></p>
+  <p class="iris-room-meta" anvil:dom-node="room_created"></p>
+  <div class="iris-room-actions" anvil:dom-node="room_actions">
+    <button type="button" class="iris-button" anvil:dom-node="copy_button"
+            anvil:on-dom:click="self._on_copy">Copy link</button>
+    <button type="button" class="iris-button" anvil:dom-node="edit_button"
+            anvil:on-dom:click="self._on_edit">Edit title</button>
+    <button type="button" class="iris-button" anvil:dom-node="rotate_button"
+            anvil:on-dom:click="self._on_rotate">Rotate passphrase</button>
+    <button type="button" class="iris-button" anvil:dom-node="delete_button"
+            anvil:on-dom:click="self._on_delete">Delete</button>
+  </div>
+  <div class="iris-room-edit" anvil:dom-node="edit_box" hidden>
+    <label class="iris-field">Meeting name
+      <input class="iris-input" type="text" maxlength="80"
+             anvil:dom-node="title_input">
+    </label>
+    <button type="button" class="iris-button iris-button-primary"
+            anvil:dom-node="save_button"
+            anvil:on-dom:click="self._on_save">Save title</button>
+    <button type="button" class="iris-button" anvil:dom-node="cancel_edit_button"
+            anvil:on-dom:click="self._on_cancel">Cancel</button>
+  </div>
+  <div class="iris-room-confirm" anvil:dom-node="confirm_box" hidden>
+    <p class="iris-message" role="alert" anvil:dom-node="confirm_text"></p>
+    <button type="button" class="iris-button iris-button-primary"
+            anvil:dom-node="confirm_button"
+            anvil:on-dom:click="self._on_confirm"></button>
+    <button type="button" class="iris-button" anvil:dom-node="cancel_confirm_button"
+            anvil:on-dom:click="self._on_cancel">Keep it</button>
+  </div>
+  <p class="iris-message" role="status" anvil:dom-node="row_message" hidden></p>
+</div>

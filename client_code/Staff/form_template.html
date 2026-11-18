@@ -74,6 +74,14 @@
           </div>
         </div>
       </section>
+      <section class="iris-card" anvil:dom-node="rooms_card">
+        <h2 class="iris-subheading">Rooms</h2>
+        <p class="iris-lede" anvil:dom-node="rooms_empty" hidden>No rooms yet. Create one above.</p>
+        <div class="iris-room-list" anvil:dom-node="rooms_list">
+          <anvil-component type="RepeatingPanel" name="rooms_panel" prop:item_template="RoomRow"></anvil-component>
+        </div>
+        <p class="iris-message" role="alert" anvil:dom-node="rooms_message" hidden></p>
+      </section>
       <section class="iris-card" anvil:dom-node="profile_card">
         <h2 class="iris-subheading">Call settings</h2>
         <p class="iris-lede">vdo.ninja parameters added to every meeting link, for
