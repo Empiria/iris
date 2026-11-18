@@ -107,9 +107,51 @@ def test_validate_profile_refuses_media_path_keys(vdo, profile):
         vdo.validate_profile(profile)
 
 
-@pytest.mark.parametrize("profile", ["turn=x", "stun=y", "nomeshcast"])
-def test_validate_profile_allows_turn_stun_nomeshcast(vdo, profile):
-    assert vdo.validate_profile(profile) == profile
+PRODUCTION = (
+    "sharperscreen=true&rbr=50000&codec=av1,vp9,vp8,h264&crb=true&q=0&ssq=-1"
+    "&trb=50000&proaudio"
+)
+
+
+def test_validate_profile_accepts_the_production_profile(vdo):
+    assert vdo.validate_profile(PRODUCTION) == PRODUCTION
+    assert vdo.validate_profile("proaudio=true&sharperscreen") == (
+        "proaudio=true&sharperscreen"
+    )
+
+
+@pytest.mark.parametrize(
+    "profile",
+    ["turn=x", "stun=y", "wss=x", "proxy=1", "push=x", "pass=x", "pwd=x", "dir=x"],
+)
+def test_validate_profile_refuses_signalling_and_ice_overrides(vdo, profile):
+    with pytest.raises(ValueError) as caught:
+        vdo.validate_profile(profile)
+    assert "is not allowed" in str(caught.value)
+
+
+@pytest.mark.parametrize("profile", ["nomeshcast", "bogus=1", "Bogus", "ssq=-1&zzz"])
+def test_validate_profile_refuses_unknown_keys(vdo, profile):
+    with pytest.raises(ValueError) as caught:
+        vdo.validate_profile(profile)
+    assert "not on the allowed list" in str(caught.value)
+
+
+def test_validate_profile_refuses_duplicate_keys(vdo):
+    with pytest.raises(ValueError) as caught:
+        vdo.validate_profile("q=0&Q=1")
+    assert "'q' appears more than once" in str(caught.value)
+    with pytest.raises(ValueError):
+        vdo.validate_profile("proaudio&proaudio=true")
+
+
+def test_validate_profile_extra_keys_extend_the_allowlist(vdo):
+    assert vdo.validate_profile("bogus=1", ["bogus"]) == "bogus=1"
+    assert vdo.parse_extra_keys(" Bogus, other ,,") == ["bogus", "other"]
+    # Extra keys never lift a refusal.
+    for bad in ("relay", "turn=x", "room=x"):
+        with pytest.raises(ValueError):
+            vdo.validate_profile(bad, [bad.split("=")[0]])
 
 
 @pytest.mark.parametrize(

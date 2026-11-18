@@ -96,13 +96,21 @@ table, with these keys:
 |-----|---------|---------|
 | `vdo_profile` | Parameter string applied to every join | empty (VDO.Ninja's own defaults) |
 | `vdo_origin` | VDO.Ninja host to use, `https://...` (`http` only for loopback) | `https://vdo.ninja` |
+| `vdo_profile_extra_keys` | Extra profile keys to allow, comma-separated | none |
 | `vdo_salt` | Reserved for permanent rooms (planned) | none |
 
 There is no settings page yet: add or edit these rows in the Data Tables
-editor. Profiles that force relaying or change the media path (`meshcast*`,
-`relay*`, `privacy`, `private`, `icefilter`, `tcp`) or that try to set the room
-or label are refused, and a bad value shows the client "This meeting is not set
-up correctly". A self-hosted VDO.Ninja is supported through `vdo_origin`.
+editor. The profile is checked against an allowlist of known safe VDO.Ninja
+parameters (`ALLOWED_NAMES` in `client_code/services/vdo.py`: video and
+screen-share quality, bitrate, codec, audio and cosmetic keys). An unknown key,
+a repeated key, a key Iris sets itself (`room`, `label`, `salt`, `hash`,
+`password` and their aliases) or a media-path or server override (`meshcast*`,
+`relay*`, `wss`, `turn`, `stun`, `proxy`, `push`, `privacy`, `tcp` and similar)
+is refused with an error naming the key, and a bad stored value shows the
+client "This meeting is not set up correctly". To allow another key for one
+deployment, add an optional `vdo_profile_extra_keys` row to the `setting`
+table, a comma-separated list such as `fullscreen,avatar`. It never lifts a
+refusal. To allow a key for everyone, add it to `ALLOWED_NAMES`. A self-hosted VDO.Ninja is supported through `vdo_origin`.
 
 VDO.Ninja hashes room names with the host it is served from, so changing
 `vdo_origin` puts every room in a different namespace.

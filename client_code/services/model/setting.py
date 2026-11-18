@@ -12,7 +12,7 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
 
     # Everything these keys hold is released to anyone with a valid meeting
     # link anyway, so reading them is public by design.
-    PUBLIC_KEYS = ("vdo_origin", "vdo_profile", "vdo_salt")
+    PUBLIC_KEYS = ("vdo_origin", "vdo_profile", "vdo_salt", "vdo_profile_extra_keys")
 
     # Upper bound on a profile admin may save. It stops an absurd paste being
     # stored, and is checked before any validation work.
@@ -29,6 +29,12 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
             return None
         return row["value"]
 
+    @classmethod
+    def _extra_keys(cls):
+        """Extra allowed profile keys from the optional comma-separated
+        vdo_profile_extra_keys setting. Never read by a client."""
+        return vdo.parse_extra_keys(cls.get_value("vdo_profile_extra_keys"))
+
     @anvil.server.server_method
     @classmethod
     def vdo_config(cls):
@@ -44,7 +50,7 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
         except ValueError as err:
             raise ValueError(f"setting vdo_origin is invalid: {err}")
         try:
-            profile = vdo.validate_profile(profile)
+            profile = vdo.validate_profile(profile, cls._extra_keys())
         except ValueError as err:
             raise ValueError(f"setting vdo_profile is invalid: {err}")
         return {
@@ -81,7 +87,7 @@ class Setting(app_tables.setting.Row, buffered=True, attrs=True):
                 + str(cls.MAX_PROFILE_LENGTH)
                 + " characters)."
             )
-        profile = vdo.validate_profile(text)
+        profile = vdo.validate_profile(text, cls._extra_keys())
         row = app_tables.setting.get(key="vdo_profile")
         if row is None:
             app_tables.setting.add_row(key="vdo_profile", value=profile)

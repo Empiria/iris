@@ -132,13 +132,13 @@ def test_set_profile_stores_the_normalised_profile_and_returns_it(
 
 
 def test_set_profile_updates_the_existing_row_and_saves_it(Setting, tables, admin):
-    _put(tables, "vdo_profile", "old=1")
+    _put(tables, "vdo_profile", "quality=1")
     existing = _profile_rows(tables)[0]
 
-    Setting.set_profile("new=2")
+    Setting.set_profile("quality=2")
 
     assert _profile_rows(tables) == [existing]
-    assert existing["value"] == "new=2"
+    assert existing["value"] == "quality=2"
     assert existing.saves >= 1
 
 
@@ -239,3 +239,22 @@ def test_profile_methods_are_registered_server_methods(Setting):
     }
 
     assert {"Setting.set_profile", "Setting.get_profile"} <= registered
+
+
+def test_set_profile_refuses_an_unknown_key_with_a_clear_message(
+    Setting, tables, admin
+):
+    with pytest.raises(ValueError) as caught:
+        Setting.set_profile("quality=1&bogus=2")
+
+    assert "'bogus' is not on the allowed list" in str(caught.value)
+    assert _profile_rows(tables) == []
+
+
+def test_the_extra_keys_setting_allows_one_more_key(Setting, tables, admin):
+    _put(tables, "vdo_profile_extra_keys", "Bogus, other")
+
+    assert Setting.set_profile("bogus=2") == "bogus=2"
+    assert Setting.vdo_config()["profile"] == "bogus=2"
+    with pytest.raises(ValueError):
+        Setting.set_profile("relay")
