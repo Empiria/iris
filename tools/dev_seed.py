@@ -9,18 +9,21 @@ Connect to the running app server, call the ping callable, expect "pong", then
 seed the rows the local stack needs. The app has tables now, so rows go in from
 this script on the privileged uplink. Today that is the two dev accounts (a staff
 user and a non-staff viewer, made by the same code as `just create-staff --dev`),
-and one known join room with its two VDO.Ninja settings, so the join e2e tests
-have a meeting to open. Later phases add their seed data here, each in its own
-function.
+one known join room with its two VDO.Ninja settings, so the join e2e tests have a
+meeting to open, and one known permanent room with a made-up passphrase, so the
+permanent-room e2e tests have something to unlock. Later phases add their seed
+data here, each in its own function.
 
 The uplink key is a local-only value that matches the Containerfile. It is never
 printed.
 """
 
 import datetime
+import importlib.util
 import os
 import sys
 import threading
+from pathlib import Path
 
 import anvil.server
 import anvil.users
@@ -51,6 +54,20 @@ DEV_VDO_ORIGIN = "http://127.0.0.1:3030"
 DEV_VDO_PROFILE = (
     "ssq=-1&sharperscreen&rbr=50000&trb=50000&crb&codec=av1,vp9,vp8,h264&q=0"
 )
+
+# The permanent room the local stack always has. tests/e2e/test_permanent_room.py
+# repeats these values, and a unit test keeps the two copies equal. All of them are
+# made up for the local stack and protect nothing.
+SEEDED_PERMANENT_SLUG = "test-room"
+SEEDED_PERMANENT_TITLE = "Seeded permanent room"
+# The VDO.Ninja room it hands off to: 20 characters, a-z and 0-9.
+SEEDED_PERMANENT_VDO_ROOM = "q7wn4hx2cvb9mz5dk3tp"
+# The VDO.Ninja room password: 24 lowercase hex characters, as a created room has.
+SEEDED_PERMANENT_VDO_PASSWORD = "0123456789abcdef01234567"
+# What a client types to open it. Any case, dashes and spaces work.
+DEV_ROOM_PASSPHRASE = "test-room-pass"
+
+VERIFIER_PATH = Path(__file__).resolve().parent.parent / "server_code" / "verifier.py"
 
 
 def _unreachable_message() -> str:
@@ -135,6 +152,55 @@ def seed_join_room(app_tables) -> str:
     return result
 
 
+def _load_verifier():
+    """server_code/verifier.py loaded by path. It imports no Anvil module."""
+    spec = importlib.util.spec_from_file_location("iris_dev_verifier", VERIFIER_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _normalised(text: str) -> str:
+    """The same reduction as client_code/services/passphrase.py: a unit test pins it."""
+    return "".join(ch for ch in text.lower() if ch != "-" and not ch.isspace())
+
+
+def seed_permanent_room(app_tables) -> str:
+    """Ensure the known permanent room, with its passphrase verifier.
+
+    Safe to run again: the room is found by slug and set to the constants, the
+    verifier is made again with a fresh salt, and the unlock throttle is cleared,
+    so a run of wrong-passphrase tests leaves nothing behind. Returns "created"
+    when the row was new, else "updated".
+    """
+    record = _load_verifier().hash_passphrase(_normalised(DEV_ROOM_PASSPHRASE))
+    values = {
+        "vdo_room": SEEDED_PERMANENT_VDO_ROOM,
+        "title": SEEDED_PERMANENT_TITLE,
+        "kind": "permanent",
+        "active": True,
+        "vdo_password": SEEDED_PERMANENT_VDO_PASSWORD,
+        "verifier": record["verifier"],
+        "verifier_salt": record["verifier_salt"],
+        "kdf_iterations": record["kdf_iterations"],
+        "failed_unlocks": 0,
+        "locked_until": None,
+        "updated": datetime.datetime.now(),
+    }
+    row = app_tables.room.get(slug=SEEDED_PERMANENT_SLUG)
+    if row is None:
+        app_tables.room.add_row(
+            slug=SEEDED_PERMANENT_SLUG,
+            created_by=create_staff.DEV_STAFF_EMAIL,
+            created=datetime.datetime.now(),
+            **values,
+        )
+        return "created"
+    for column, value in values.items():
+        row[column] = value
+    return "updated"
+
+
 def main() -> int:
     global URL
     try:
@@ -156,6 +222,8 @@ def main() -> int:
         _seed_accounts()
         result = seed_join_room(app_tables)
         print(f"seed: join room ready ({DEV_ROOM_SLUG}, {result})")
+        result = seed_permanent_room(app_tables)
+        print(f"seed: permanent room ready ({SEEDED_PERMANENT_SLUG}, {result})")
     finally:
         anvil.server.disconnect()
     return 0
