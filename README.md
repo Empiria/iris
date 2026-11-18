@@ -104,101 +104,84 @@ VDO.Ninja hashes room names with the host it is served from, so changing
 ## Install
 
 Iris is an Anvil app, and Anvil apps run in two places. Pick whichever suits
-you: no Anvil account is needed for the second.
-
-| | Hosted on anvil.works | Self-hosted with anvil-app-server |
-|---|---|---|
-| Needs | An [Anvil](https://anvil.works) account | A machine that can run the open-source [anvil-app-server](https://github.com/anvil-works/anvil-runtime) (Java and Python 3.10, or a container) |
-| Looks after | Anvil runs, backs up and serves the app | You run it, keep its database and put TLS in front |
-| Status here | Follows Anvil's documented steps, not re-run for this README | The local stack is exercised by the tests. A production deployment has not been tried |
-
-Either way, start by cloning this repo.
+you. **You do not need an Anvil account to self-host.** Start by cloning this
+repo. For the Anvil side of each step, follow the links to Anvil's own docs.
 
 ### Route A: hosted on anvil.works
 
-1. **Create the app from this repo.** Create a new Anvil app from the git repo.
-2. **Add the dependencies.** In the Anvil editor, Settings → Dependencies →
-   "Add Dependency" for each of these. Dependency ids are generated per app, so
-   they can't be copied from `anvil.yaml` into another app.
-   - `routing` v0.7.0
-   - `anvil-reactive` v0.1.4 (repo `github.com/anvilistas/reactive`)
-3. **Resolve the Data Tables schema.** The schema is in `anvil.yaml`
-   (`room`, `setting` and `users`). On anvil.works, pushing a schema change
-   does not apply it: open the app in the editor and resolve it, once for each
-   environment (development and production).
-4. **Set the secrets.** Anvil encrypts secret values to the app and account that
-   created them, so a fork or fresh deployment has the secret names but not the
-   values. Re-enter them in your own app. Iris needs `iris_staff_email`, and
-   optionally `iris_staff_password`, for the next step.
-5. **Create the first staff user.** Sign-up is off, and a browser can't run a
-   script, so `scripts/CreateStaff.py` is the only way the first staff account
-   comes to exist. It refuses to run once any staff user exists. Press Run on
-   `CreateStaff` in the Anvil editor and read its output, then delete the
-   password secret. With no password set, a random one is generated and printed
-   once, on a line `generated password: ...`.
-6. **Set the profile.** Add `vdo_profile` (and, if you host VDO.Ninja yourself,
+Needs an [Anvil](https://anvil.works) account. This route follows Anvil's
+documented steps and has not been re-run for this README.
+
+1. **Create the app from this repo** (see Anvil's
+   [version control docs](https://anvil.works/docs/version-control)).
+2. **Add the dependencies** in the editor
+   ([dependencies docs](https://anvil.works/docs/deployment/dependencies)):
+   `routing` v0.7.0 and `anvil-reactive` v0.1.4 (repo
+   `github.com/anvilistas/reactive`). Dependency ids are generated per app, so
+   they can't be copied from `anvil.yaml`.
+3. **Resolve the [Data Tables](https://anvil.works/docs/data-tables) schema**
+   (`room`, `setting`, `users`) in the editor. Pushing a schema change doesn't
+   apply it, so resolve it once per
+   [environment](https://anvil.works/docs/deployment/environments).
+4. **Set the [secrets](https://anvil.works/docs/workflows/security/encrypting-secret-data).**
+   Secret values can't be copied between apps, so re-enter them. Iris needs
+   `iris_staff_email` and optionally `iris_staff_password`.
+5. **Create the first staff user.** Sign-up is off, so
+   `scripts/CreateStaff.py` is the only way the first account comes to exist,
+   and it refuses to run once a staff user exists. Press Run on `CreateStaff` in
+   the editor, read its output, then delete the password secret. With no
+   password set, a random one is printed once on a line
+   `generated password: ...`.
+6. **Set the profile:** add `vdo_profile` (and, for your own VDO.Ninja,
    `vdo_origin`) rows to the `setting` table.
-7. **Custom domain.** Point your domain at the app using Anvil's custom domain
-   settings. Meeting links are always cold visits to `/<slug>`, so check a cold
-   load of `/<slug>` on your own domain once it is set up (see
+7. **Add a [custom domain](https://anvil.works/docs/deployment/custom-domains)**,
+   then check a cold load of `/<slug>` on it (see
    [Status and known limits](#status-and-known-limits)).
 
 ### Route B: self-hosted with anvil-app-server
 
-You do not need an Anvil account. This repo's local stack is a working example
-of the runtime configuration; `Containerfile` and `justfile` are the reference.
+No Anvil account needed. Iris runs on the open-source
+[anvil-app-server](https://github.com/anvil-works/anvil-runtime). The local
+stack (`Containerfile` and `justfile`) is the working example, and is the part
+that has been exercised.
 
-**What the local stack does (exercised).** `just build` fetches the dependency
-apps from their public GitHub repos at the tags pinned in `anvil.yaml` (no login)
-and builds an image with `anvil-app-server` 1.17.0. `just up` runs it with:
+**On the local stack.** `just build` fetches the dependency apps at the tags
+pinned in `anvil.yaml` (no login) and builds an image with `anvil-app-server`
+1.17.0. `just up` runs it with:
 
-- `--app /srv/<package_name>`: the app, mounted read-only from this checkout.
-- `--dep-id <id>=<package>` for each dependency, printed by
-  `uv run --script tools/anvil_deps.py --dep-id-args`. The dependency apps sit
-  beside the app in `/srv`, and the ids come from `anvil.yaml`, so there is
-  nothing to add by hand and no editor step. After a dependency or
-  `package_name` change, run `just fresh` to regenerate the flags.
-- `--data-dir /data` on a named volume, so the embedded database survives
-  restarts. `just down` and `just up` keep the data; `just fresh` discards it.
-- `--auto-migrate` and `--ignore-invalid-schema`: the first boot against an empty
-  volume creates the Data Tables schema from `anvil.yaml`, so there is no
-  resolve step as there is on anvil.works.
-- `--origin http://localhost:<port>` and `--port 3030`: the origin must be the
-  URL the browser uses, or the page loads its assets and websocket from the wrong
-  place.
+- `--app /srv/<package_name>` and a `--dep-id <id>=<package>` per dependency.
+  `uv run --script tools/anvil_deps.py --dep-id-args` prints them from
+  `anvil.yaml`, so there is no editor step. Run `just fresh` after a dependency
+  or `package_name` change.
+- `--data-dir /data` on a named volume, so the database survives `just down` and
+  `just up` (`just fresh` discards it).
+- `--auto-migrate --ignore-invalid-schema`: the first boot creates the Data
+  Tables schema from `anvil.yaml`, so there is no resolve step.
+- `--origin http://localhost:<port> --port 3030`: the origin must be the URL the
+  browser uses.
 - `--uplink-key`, a fixed development value.
 
-Server modules run in the image's Python 3.10, and packages in
-`server_code/requirements.txt` are installed into the image. The first admin is
-created with `just create-staff --dev` or `just create-staff you@example.com`,
-which launches `scripts/CreateStaff.py` over the uplink (a generated password is
-in `just logs`). Then add the `vdo_profile` (and optionally `vdo_origin`) rows
-to the `setting` table.
+Packages in `server_code/requirements.txt` are installed into the image. Create
+the first admin with `just create-staff you@example.com` (or `--dev`), which
+runs `scripts/CreateStaff.py` over the uplink; a generated password is in
+`just logs`. Then add the `vdo_profile` rows to the `setting` table.
 
-**Taking it to production (not yet tried).** The pieces below follow from the
-flags above, but nobody has run Iris on a production self-hosted server yet, so
-treat this as a starting point and test it:
+**Production self-hosting is untested.** Nobody has yet run Iris this way beyond
+the local stack, so treat the following as a starting point:
 
-- **Don't reuse the dev image as it is.** `Containerfile` bakes in the well-known
-  `dev-uplink` key and is meant for loopback only. Use your own key and don't
-  publish the port beyond the machine.
-- **TLS and a domain.** Put a reverse proxy (Caddy, nginx or similar) in front,
-  terminating TLS on your domain, with websocket support, and set `--origin` to
-  the public `https://` URL.
-- **Keep the database volume** and back it up. Without it the Data Tables, users
-  and links are gone.
-- **First admin.** `scripts/CreateStaff.py` reads `IRIS_STAFF_EMAIL` and
-  `IRIS_STAFF_PASSWORD` from the environment as well as from launch arguments
-  and Anvil secrets. `tools/create_staff.py` accepts `IRIS_UPLINK_URL` and
-  `IRIS_UPLINK_KEY`, but only for a `ws://` URL on `localhost` or `127.0.0.1`,
-  so run it on the server itself, or through an SSH tunnel. This path hasn't been
-  tested against a non-development server.
-- **Secrets.** Iris itself reads secrets only in `CreateStaff`, and that script
-  falls back to environment variables, so a self-hosted deployment can start
-  without any. Whether the app-server's secrets service meets your needs for
-  anything you add is untested.
-- **Cold loads.** Check a cold load of `/<slug>` on your own domain (see
-  [Status and known limits](#status-and-known-limits)).
+- The `Containerfile` is for loopback only and bakes in the well-known
+  `dev-uplink` key. Use your own key and don't publish the port beyond the
+  machine.
+- Put a TLS reverse proxy (with websocket support) in front, and set `--origin`
+  to the public `https://` URL.
+- Keep and back up the database volume.
+- For the first admin, `scripts/CreateStaff.py` also reads `IRIS_STAFF_EMAIL`
+  and `IRIS_STAFF_PASSWORD` from the environment, and `tools/create_staff.py`
+  honours `IRIS_UPLINK_URL` and `IRIS_UPLINK_KEY`, but only for a `ws://` URL on
+  localhost, so run it on the server or through an SSH tunnel. Untested against
+  a non-development server.
+- Iris reads secrets only in `CreateStaff`, which falls back to the environment,
+  so no secrets are needed to start.
 
 ## Local development
 
