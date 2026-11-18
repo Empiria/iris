@@ -18,8 +18,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 # Callables any browser may call. ping: the stack health check. staff_status:
-# reports only the caller's own sign-in state (plan 02-03).
-PUBLIC_CALLABLES = {"ping", "staff_status"}
+# reports only the caller's own sign-in state (plan 02-03). lookup_room: public
+# by design, returns a room only for an active recorded slug (JOIN-01, JOIN-04),
+# released to anyone holding the link (plan 02-05).
+PUBLIC_CALLABLES = {"ping", "staff_status", "lookup_room"}
 
 # Server methods any browser may call. Room.lookup is how a meeting link opens
 # and releases nothing for a slug no staff member created. Setting methods read
