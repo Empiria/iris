@@ -1,0 +1,26 @@
+<main class="iris-page">
+  <section class="iris-card" anvil:dom-node="loading_card">
+    <p class="iris-lede">Opening your meeting</p>
+  </section>
+  <section class="iris-card" anvil:dom-node="join_card" hidden>
+    <h1 class="iris-heading" anvil:dom-node="meeting_title"></h1>
+    <p class="iris-lede">Enter your name to join the meeting.</p>
+    <form anvil:dom-node="join_form" anvil:on-dom:submit="self._on_submit">
+      <label class="iris-field">Your name
+        <input class="iris-input" type="text" maxlength="60" autocomplete="name"
+               anvil:dom-node="name_input">
+      </label>
+      <p class="iris-message" role="alert" anvil:dom-node="join_message" hidden></p>
+      <button type="submit" class="iris-button iris-button-primary"
+              anvil:dom-node="join_button">Join meeting</button>
+    </form>
+  </section>
+  <section class="iris-card" anvil:dom-node="missing_card" hidden>
+    <h1 class="iris-heading">No such meeting</h1>
+    <p class="iris-lede">This link does not match a meeting. Check the link you were sent, or ask your host for a new one.</p>
+  </section>
+  <section class="iris-card" anvil:dom-node="error_card" hidden>
+    <h1 class="iris-heading">Could not open the meeting</h1>
+    <p class="iris-lede">Try again in a moment, or ask your host for help.</p>
+  </section>
+</main>
