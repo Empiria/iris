@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Empiria
 
-from iris.globals import session
+from routing import router
+
 from iris.services import page_language, routes  # noqa: F401  # pyright: ignore[reportAttributeAccessIssue]
 
 page_language.apply()
 
-session.launch()
+router.clear_cache()
+router.launch()

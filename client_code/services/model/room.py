@@ -6,7 +6,7 @@ import datetime
 import anvil.server
 from anvil.tables import app_tables
 
-from iris.services import passphrase, permissions, slugs  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import passphrase, permissions, slugs, vdo  # pyright: ignore[reportAttributeAccessIssue]
 from iris.services.model.setting import Setting
 
 _SLUG_ATTEMPTS = 10
@@ -15,14 +15,13 @@ _SLUG_ATTEMPTS = 10
 UNLOCK_LIMIT = 10
 UNLOCK_LOCK_MINUTES = 5
 
-_HEX = "0123456789abcdef"
 # vdo.ninja passwords run 1 to 49 characters. 24 hex characters is 96 bits.
 _VDO_PASSWORD_LENGTH = 24
 
 
 def _now():
-    """The current time, naive and in UTC (the server's clock). Tests patch this."""
-    return datetime.datetime.now()
+    """The current time, naive and in UTC. Tests patch this."""
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def _verifier():
@@ -284,7 +283,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
             verifier=record["verifier"],
             verifier_salt=record["verifier_salt"],
             kdf_iterations=record["kdf_iterations"],
-            vdo_password=slugs.random_string(_HEX, _VDO_PASSWORD_LENGTH),
+            vdo_password=slugs.random_string(vdo.HEX_LOWER, _VDO_PASSWORD_LENGTH),
             failed_unlocks=0,
             locked_until=None,  # pyright: ignore[reportArgumentType]
         )
@@ -394,7 +393,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
             verifier_salt=record["verifier_salt"],
             kdf_iterations=record["kdf_iterations"],
             vdo_room=slugs.new_vdo_room(),
-            vdo_password=slugs.random_string(_HEX, _VDO_PASSWORD_LENGTH),
+            vdo_password=slugs.random_string(vdo.HEX_LOWER, _VDO_PASSWORD_LENGTH),
             failed_unlocks=0,
             locked_until=None,  # pyright: ignore[reportArgumentType]
             updated=_now(),

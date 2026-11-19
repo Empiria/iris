@@ -46,7 +46,13 @@ RESERVED_SLUGS = frozenset(
     ]
 )
 
-_SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
+# The characters a slug may hold: lower-case letters, digits and "-".
+SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
+
+
+def control_chars_to_spaces(text):
+    """`text` with each control character (below 32, or 127) replaced by a space."""
+    return "".join(" " if ord(ch) < 32 or ord(ch) == 127 else ch for ch in text)
 
 
 def normalise(slug):
@@ -64,7 +70,7 @@ def looks_like_slug(slug):
         return False
     if slug.startswith("-") or slug.endswith("-"):
         return False
-    if any(ch not in _SLUG_CHARS for ch in slug):
+    if any(ch not in SLUG_CHARS for ch in slug):
         return False
     return slug not in RESERVED_SLUGS
 
@@ -102,7 +108,7 @@ def clean_room_slug(text):
         raise ValueError(
             "Use at most " + str(MAX_SLUG_LENGTH) + " characters for the name."
         )
-    if any(ch not in _SLUG_CHARS for ch in slug):
+    if any(ch not in SLUG_CHARS for ch in slug):
         raise ValueError("Use only letters, numbers and dashes in the name.")
     if slug.startswith("-") or slug.endswith("-"):
         raise ValueError("The name can't start or end with a dash.")

@@ -75,6 +75,11 @@ DEV_ROOM_PASSPHRASE = "test-room-pass"
 VERIFIER_PATH = Path(__file__).resolve().parent.parent / "server_code" / "verifier.py"
 
 
+def _utcnow() -> datetime.datetime:
+    """Naive UTC, matching the server's clock whatever zone the host is in."""
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+
 def _unreachable_message() -> str:
     return (
         f"seed: could not reach the app server at {URL}; start the stack with 'just up'"
@@ -143,7 +148,7 @@ def seed_join_room(app_tables) -> str:
             kind="one-off",
             active=True,
             created_by=create_admin.DEV_ADMIN_EMAIL,
-            created=datetime.datetime.now(),
+            created=_utcnow(),
         )
         result = "created"
     else:
@@ -191,14 +196,14 @@ def seed_permanent_room(app_tables) -> str:
         "kdf_iterations": record["kdf_iterations"],
         "failed_unlocks": 0,
         "locked_until": None,
-        "updated": datetime.datetime.now(),
+        "updated": _utcnow(),
     }
     row = app_tables.room.get(slug=SEEDED_PERMANENT_SLUG)
     if row is None:
         app_tables.room.add_row(
             slug=SEEDED_PERMANENT_SLUG,
             created_by=create_admin.DEV_ADMIN_EMAIL,
-            created=datetime.datetime.now(),
+            created=_utcnow(),
             **values,
         )
         return "created"

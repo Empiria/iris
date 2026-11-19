@@ -10,7 +10,10 @@
 
 # Java 21 matches the host JDK; jammy gives Python 3.10, matching the
 # python310-minimal server spec and Anvil's pre-3.10 syntax constraint.
-FROM docker.io/library/eclipse-temurin:21-jre-jammy
+# The digest pins the multi-arch index of the 21-jre-jammy tag as it was on
+# 2026-11-18. To update it, run
+# `skopeo inspect --raw docker://docker.io/library/eclipse-temurin:21-jre-jammy | sha256sum`.
+FROM docker.io/library/eclipse-temurin:21-jre-jammy@sha256:dff6eb46527bd293a3c06bbbe9e64e8c9f91f01905b5abbdad31761c03059d2c
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 python3-pip ca-certificates \
@@ -25,9 +28,18 @@ RUN apt-get update \
 # So it is fetched here, as root, at build time: baked in, read-only and readable
 # by the runtime user. This step needs outbound network access to the host that
 # serves the JAR.
+#
+# The JAR is checked against the sha256 below, so a changed download fails the
+# build. When `anvil-app-server` is bumped, build once, copy the hash the
+# failed check prints, and update the value.
+ARG APP_SERVER_JAR_SHA256=7fc43b11ddc846d43b8ba17b0926954f26b36f2c42e47398251ba55d8954d67f
 COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir anvil-app-server==1.17.0 -r /tmp/requirements.txt \
- && python3 -c "import anvil_app_server; anvil_app_server.find_or_download_app_server()"
+RUN pip3 install --no-cache-dir -q anvil-app-server==1.17.0 -r /tmp/requirements.txt \
+ && jar="$(python3 -c 'import anvil_app_server as a; print(a.find_or_download_app_server())' 2>/dev/null | tail -n 1)" \
+ && actual="$(sha256sum "${jar}" | cut -d' ' -f1)" \
+ && if [ "${actual}" != "${APP_SERVER_JAR_SHA256}" ]; then \
+      echo "app-server JAR sha256 is ${actual}, expected ${APP_SERVER_JAR_SHA256}" >&2; exit 1; \
+    fi
 
 # Embedded Postgres refuses to run as root. /data is created owned by the
 # unprivileged user, and the empty named volume inherits that ownership when it

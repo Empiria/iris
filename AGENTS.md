@@ -14,8 +14,7 @@ Iris is an [Anvil](https://anvil.works) app: Python on both client and server, w
 ## Layout
 
 - `anvil.yaml`: app config. `package_name` is `iris`, startup is the `startup` module, and the services are Data Tables and Secrets.
-- `client_code/startup.py`: entry point. It launches the session, which starts the router.
-- `client_code/globals.py`: the `session` object (router lifecycle).
+- `client_code/startup.py`: entry point. It clears the router cache and launches the router.
 - `client_code/services/routes.py`: route classes for the `routing` dependency. `/` is the admin page (`/admin` and the older `/staff` are aliases), and every other path is a meeting slug.
 - `server_code/`: server modules. Server-side packages go in `requirements.txt`.
 - `scripts/CreateAdmin.py`: the first-admin script (it still reads the old `iris_staff_*` secrets and `IRIS_STAFF_*` variables as a fallback) and the only caller of `signup_with_email`. `just create-admin` launches it on the local stack, and a hosted app runs it from the Anvil editor. `anvil validate` rejects a `scripts` path, so `just validate` skips it.

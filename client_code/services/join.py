@@ -37,7 +37,7 @@ def clean_display_name(text):
     """
     if not isinstance(text, str):
         raise ValueError(NAME_REQUIRED_MESSAGE)
-    spaced = "".join(" " if ord(ch) < 32 or ord(ch) == 127 else ch for ch in text)
+    spaced = slugs.control_chars_to_spaces(text)
     name = " ".join(spaced.split())[:NAME_MAX].strip()
     if name == "":
         raise ValueError(NAME_REQUIRED_MESSAGE)

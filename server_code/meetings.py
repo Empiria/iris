@@ -3,7 +3,7 @@
 
 import anvil.server
 
-from iris.services import limits, permissions  # pyright: ignore[reportAttributeAccessIssue]
+from iris.services import limits, permissions, slugs  # pyright: ignore[reportAttributeAccessIssue]
 from iris.services.model.room import Room
 
 MAX_TITLE_LENGTH = limits.TITLE_MAX
@@ -15,7 +15,7 @@ def clean_title(text):
         return ""
     if not isinstance(text, str):
         raise ValueError("Title must be text")
-    spaced = "".join(" " if ord(ch) < 32 or ord(ch) == 127 else ch for ch in text)
+    spaced = slugs.control_chars_to_spaces(text)
     return spaced.strip()[:MAX_TITLE_LENGTH].strip()
 
 

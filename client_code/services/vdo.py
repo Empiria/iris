@@ -149,7 +149,7 @@ RESERVED_NAMES = (
     "p",
 )
 
-_HEX_LOWER = "0123456789abcdef"
+HEX_LOWER = "0123456789abcdef"
 _HEX_UPPER = "0123456789ABCDEF"
 _UNRESERVED = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 _HOST_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789.-"
@@ -164,8 +164,8 @@ def _unquote_once(text):
     while i < size:
         ch = text[i]
         if ch == "%" and i + 2 < size:
-            high = _HEX_LOWER.find(text[i + 1].lower())
-            low = _HEX_LOWER.find(text[i + 2].lower())
+            high = HEX_LOWER.find(text[i + 1].lower())
+            low = HEX_LOWER.find(text[i + 2].lower())
             if high >= 0 and low >= 0 and high * 16 + low < 128:
                 out.append(chr(high * 16 + low))
                 i += 3
@@ -235,11 +235,6 @@ def quote(text):
             for byte in _utf8_bytes(code)
         )
     return "".join(out)
-
-
-def profile_keys(profile):
-    """The raw parameter names in a profile, in order."""
-    return [part.split("=", 1)[0] for part in (profile or "").split("&") if part]
 
 
 def _decoded_name(raw_key):

@@ -193,11 +193,6 @@ def test_validate_profile_error_names_key_not_value(vdo):
     assert "SECRETVALUE" not in str(caught.value)
 
 
-def test_profile_keys(vdo):
-    assert vdo.profile_keys(SCREEN_SHARE)[:3] == ["ssq", "sharperscreen", "rbr"]
-    assert vdo.profile_keys("") == []
-
-
 # --- quote ----------------------------------------------------------------
 
 

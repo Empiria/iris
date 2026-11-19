@@ -16,7 +16,6 @@ ROUTE_OWNER = "runtime"
 
 _PATH_OWNERS = ("runtime", "own")
 _OWNERS = _PATH_OWNERS + ("query",)
-_SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
 
 
 def link_for(base, slug, owner):
@@ -31,7 +30,7 @@ def link_for(base, slug, owner):
     if clean == "":
         raise ValueError("Slug is empty")
     for char in clean:
-        if char not in _SLUG_CHARS:
+        if char not in slugs.SLUG_CHARS:
             raise ValueError("Slug has a character that is not allowed")
     root = str(base or "").rstrip("/")
     if root == "":
