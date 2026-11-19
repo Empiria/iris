@@ -105,8 +105,12 @@ def unlock(slug, text, call):
     return {"state": "error"}
 
 
-def join_url(found, name, in_fragment=None):
+def join_url(found, name, in_fragment=None, overrides=""):
     """The address that hands a client to the room, or ValueError.
+
+    `overrides` is a normalised string from `vdo.parse_overrides`. It goes onto
+    the stored profile, the participant's keys replacing the profile's, so the
+    room link carries them whether the page embeds or redirects.
 
     Built only by `vdo.build_join_url`, which checks the origin and the profile
     again, so this module is never a second place that forms an address. A
@@ -118,11 +122,26 @@ def join_url(found, name, in_fragment=None):
     return vdo.build_join_url(
         found["origin"],
         found["vdo_room"],
-        found["profile"],
+        vdo.merge_profile(found["profile"], overrides),
         clean_display_name(name),
         salt=found["salt"],
         password=found.get("password"),
         in_fragment=in_fragment,
+    )
+
+
+def display_url(found, name, overrides=""):
+    """The join address for showing and copying: no room password, no salt.
+
+    Same origin, room, profile and label as `join_url`, so a participant sees
+    the exact link, but a copy of it does not open a protected room.
+    """
+    return vdo.build_join_url(
+        found["origin"],
+        found["vdo_room"],
+        vdo.merge_profile(found["profile"], overrides),
+        clean_display_name(name),
+        in_fragment=JOIN_IN_FRAGMENT,
     )
 
 

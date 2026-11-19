@@ -7,6 +7,7 @@ from anvil_reactive.main import render_effect, signal
 from iris.services import (
     handoff,  # pyright: ignore[reportAttributeAccessIssue]
     join,  # pyright: ignore[reportAttributeAccessIssue]
+    vdo,  # pyright: ignore[reportAttributeAccessIssue]
 )
 
 from ._anvil_designer import JoinTemplate
@@ -34,6 +35,7 @@ class Join(JoinTemplate):
     def __init__(self, routing_context=None, **properties):
         self.routing_context = routing_context
         self.found = None
+        self.overrides = ""
         self.init_components(**properties)
         self.add_event_handler("show", self.form_show)
 
@@ -77,7 +79,25 @@ class Join(JoinTemplate):
         context = self.routing_context
         return context.params["slug"] if context else None
 
+    def _read_overrides(self):
+        """Take the page address's query as settings for this visit's room link.
+
+        Read from the raw address, because the router turns `q=2` into a number.
+        Anything not allowed is dropped, and the person is told which keys.
+        """
+        try:
+            from anvil.js import window
+
+            self.overrides, ignored = vdo.parse_overrides(window.location.search)
+        except Exception:
+            self.overrides, ignored = "", []
+        self._notice = vdo.override_notice(ignored)
+        self.override_note.show(self._notice)
+
+    _notice = ""
+
     def form_show(self, **event_args):
+        self._read_overrides()
         try:
             data = self._route_data()
             state = data["state"]
@@ -130,7 +150,13 @@ class Join(JoinTemplate):
                 if self.found is None:
                     return
             # Same call stack as the click, so the frame is made by a user gesture.
-            how = handoff.start(join.join_url(self.found, name), self.meeting_frame)
+            url = join.join_url(self.found, name, overrides=self.overrides)
+            # Built before the hand-off so a bad override fails here, not mid-call.
+            self.full_link.value = join.display_url(
+                self.found, name, overrides=self.overrides
+            )
+            self.fulllink_ignored.show(self._notice)
+            how = handoff.start(url, self.meeting_frame)
             if how == "iframe":
                 self.state = "joined"
         except ValueError:
@@ -139,3 +165,10 @@ class Join(JoinTemplate):
             self._show_message(UNLOCK_ERROR_MESSAGE)
         finally:
             button.disabled = False
+
+    def _on_fulllink_toggle(self, event, **properties):
+        panel = self.dom_nodes["fulllink_panel"]
+        panel.hidden = not panel.hidden
+        self.dom_nodes["fulllink_toggle"].setAttribute(
+            "aria-expanded", "false" if panel.hidden else "true"
+        )

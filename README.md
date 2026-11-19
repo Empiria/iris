@@ -140,6 +140,20 @@ table, a comma-separated list such as `fullscreen,avatar`. It never lifts a
 refusal. To allow a key for everyone, add it to `ALLOWED_NAMES`. A self-hosted
 VDO.Ninja is supported through `vdo_origin`.
 
+#### Per-visit overrides and the Full link panel
+
+A participant on a weak connection can add settings to their own meeting link,
+for example `/<slug>?q=2&rbr=200`. The keys go through the same allowlist as the
+profile (`ALLOWED_NAMES` only; `vdo_profile_extra_keys` is not honoured, because
+the browser cannot read it). A participant's key replaces the profile's, under
+any spelling of the same setting, and anything not allowed (`room`, `password`,
+`salt`, `label`, server overrides, unknown keys, odd values) is dropped and named
+on the join card. It works for both the embedded room and the redirect.
+
+Once in the call, a **Full link** button opens a panel with the VDO.Ninja
+address (profile, overrides, room and name). The room password and salt are left
+out of what it shows and copies, so a copied link does not open a protected room.
+
 VDO.Ninja hashes room names with the host it is served from, so changing
 `vdo_origin` puts every room in a different namespace.
 

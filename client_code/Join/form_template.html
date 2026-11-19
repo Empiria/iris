@@ -12,6 +12,7 @@
       <anvil-component name="name_input" type="form:TextField"
                        prop:label="Your name" prop:maxlength="60"
                        prop:autocomplete="name"></anvil-component>
+      <anvil-component name="override_note" type="form:Message"></anvil-component>
       <anvil-component name="join_message" type="form:Message" prop:level="alert"></anvil-component>
       <button type="submit" class="iris-button iris-button-primary"
               anvil:dom-node="join_button">Join meeting</button>
@@ -29,5 +30,17 @@
 </main>
 <div class="iris-frame-shell" anvil:dom-node="frame_shell" hidden>
   <anvil-component name="meeting_frame" type="form:MeetingFrame"></anvil-component>
+  <div class="iris-fulllink">
+    <section class="iris-card iris-fulllink-panel" anvil:dom-node="fulllink_panel" hidden>
+      <h2 class="iris-subheading">Full link</h2>
+      <anvil-component name="full_link" type="form:CopyField"
+                       prop:label="VDO.Ninja link"></anvil-component>
+      <p class="iris-lede">The room password and salt are left out on purpose, so a copy of this link will not open a protected room.</p>
+      <p class="iris-lede">Weak connection? Add settings to this page's address and join again, for example <code>?q=2&amp;rbr=200&amp;trb=200</code>. <code>q</code> lowers your video resolution (0 is 1080p, 1 is 720p, 2 is 360p), <code>rbr</code> caps the video you send to others and <code>trb</code> caps the video you receive, both in kbps. Other video, audio and screen-share settings are accepted; anything else is ignored.</p>
+      <anvil-component name="fulllink_ignored" type="form:Message"></anvil-component>
+    </section>
+    <button type="button" class="iris-button iris-fulllink-toggle" anvil:dom-node="fulllink_toggle"
+            aria-expanded="false" anvil:on-dom:click="self._on_fulllink_toggle">Full link</button>
+  </div>
 </div>
 </div>

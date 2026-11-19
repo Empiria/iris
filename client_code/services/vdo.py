@@ -28,6 +28,10 @@ DEFAULT_PROFILE = ""
 # the short aliases rbr, crb, trb, ssq and q against the develop-branch
 # main.js, which reads each of them as a URL parameter. Owen's production
 # profile uses sharperscreen, rbr, trb, crb, codec, q, ssq and proaudio.
+# ltb, ovb, tb, bitrate and vb are the documented short names of
+# limittotalbitrate, outboundvideobitrate, totalbitrate and videobitrate (read in
+# docs.vdo.ninja on 2026-11-19; not grepped in main.js). maxbandwidth is left
+# out: the docs call it Chromium-only and its author is unsure it works.
 # To allow one more key for one deployment, put it in the vdo_profile_extra_keys
 # setting; to allow it for everyone, add it here.
 ALLOWED_NAMES = (
@@ -63,6 +67,11 @@ ALLOWED_NAMES = (
     "totalscenebitrate",
     "tsb",
     "totalbitrate",
+    "tb",
+    "ltb",
+    "ovb",
+    "bitrate",
+    "vb",
     "controlroombitrate",
     "crb",
     "zoomedbitrate",
@@ -147,6 +156,21 @@ RESERVED_NAMES = (
     "password",
     "pw",
     "p",
+)
+
+# Names that are one vdo.ninja setting under two or more spellings. An override
+# replaces every spelling in the profile, so the room never sees both.
+ALIAS_GROUPS = (
+    ("quality", "q"),
+    ("roombitrate", "rbr"),
+    ("totalroombitrate", "trb"),
+    ("totalscenebitrate", "tsb"),
+    ("totalbitrate", "tb"),
+    ("controlroombitrate", "crb"),
+    ("screensharequality", "ssq"),
+    ("limittotalbitrate", "ltb"),
+    ("outboundvideobitrate", "ovb"),
+    ("videobitrate", "bitrate", "vb"),
 )
 
 HEX_LOWER = "0123456789abcdef"
@@ -388,3 +412,94 @@ def build_join_url(
     if salt:
         parts.append("salt=" + quote(salt))
     return base + "/?" + "&".join(parts)
+
+
+_VALUE_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~,:"
+_NOTICE_NAMES_MAX = 5
+_NOTICE_NAME_LENGTH = 24
+
+
+def _group(name):
+    """Every spelling of `name`: its alias group, or just itself."""
+    for names in ALIAS_GROUPS:
+        if name in names:
+            return names
+    return (name,)
+
+
+def _part_name(part):
+    return _decoded_name(part.split("=", 1)[0])
+
+
+def parse_overrides(query):
+    """Split a page's query string into usable overrides and ignored names.
+
+    Returns `(overrides, ignored)`. `overrides` is a normalised `k=v&k=v` string
+    holding only allowlisted keys with plain values: letters, digits and `-._~,:`
+    (a key with no value is fine). Everything else is dropped and its key listed
+    in `ignored`: keys outside ALLOWED_NAMES (which never includes room, password,
+    salt, label or any server override), keys Iris sets, a second spelling of a
+    key already taken, and values with other characters. The first of a repeated
+    setting wins. Extra keys from the vdo_profile_extra_keys setting are not
+    honoured here, because the browser cannot read that setting.
+    """
+    text = str(query or "")
+    if text.startswith("?"):
+        text = text[1:]
+    taken = []
+    kept = []
+    ignored = []
+    for part in text.split("&"):
+        if not part:
+            continue
+        name = _part_name(part)
+        if not name:
+            continue
+        value = part.split("=", 1)[1] if "=" in part else None
+        if (
+            _denied(name)
+            or name in RESERVED_NAMES
+            or name not in ALLOWED_NAMES
+            or any(ch not in _VALUE_CHARS for ch in (value or ""))
+            or name in taken
+        ):
+            ignored.append(name)
+            continue
+        taken.extend(_group(name))
+        kept.append(name if value is None else name + "=" + value)
+    return "&".join(kept), ignored
+
+
+def override_notice(ignored):
+    """One fixed-shape sentence naming ignored keys, or "" when there are none.
+
+    Names are cut short and capped in number, and only ever shown as page text.
+    """
+    if not ignored:
+        return ""
+    shown = []
+    for name in ignored[:_NOTICE_NAMES_MAX]:
+        text = "".join(ch if 32 < ord(ch) < 127 else "?" for ch in name)
+        shown.append(text[:_NOTICE_NAME_LENGTH])
+    more = len(ignored) - len(shown)
+    names = ", ".join(shown) + (f" and {more} more" if more > 0 else "")
+    return "Ignored in the link (not an allowed setting or value): " + names + "."
+
+
+def merge_profile(profile, overrides):
+    """The stored profile with `overrides` on top, or raise ValueError.
+
+    A participant's key replaces the profile's, under any spelling of the same
+    setting, and the overrides come last. The overrides are checked against
+    ALLOWED_NAMES again here, and the result is checked for repeated keys.
+    """
+    clean = validate_profile(profile, check_allowed=False)
+    extra = validate_profile(overrides)
+    if not extra:
+        return clean
+    replaced = []
+    for part in extra.split("&"):
+        replaced.extend(_group(_part_name(part)))
+    kept = [p for p in clean.split("&") if p and _part_name(p) not in replaced]
+    merged = "&".join(kept + extra.split("&"))
+    return validate_profile(merged, check_allowed=False)

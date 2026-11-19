@@ -393,3 +393,34 @@ def test_the_hand_off_url_never_contains_the_passphrase(
     assert normalised not in url
     assert PASSWORD in url.split("#", 1)[1]
     assert PASSWORD not in url.split("#", 1)[0]
+
+
+# --- overrides and the displayed address ----------------------------------
+
+
+def test_join_url_applies_overrides_over_the_profile(join):
+    url = join.join_url(_found(), "Ann", in_fragment=True, overrides="q=2&fps=15")
+
+    assert url.count("&q=") == 1 and "q=0" not in url
+    assert "q=2" in url and "fps=15" in url
+    # Settings stay in the query, so no key is in both the query and the fragment.
+    query, fragment = url.split("#")
+    assert fragment == f"room={VDO_ROOM}&label=Ann"
+    assert "room=" not in query
+
+
+def test_join_url_refuses_a_hostile_override(join):
+    with pytest.raises(ValueError):
+        join.join_url(_found(), "Ann", overrides="room=other")
+
+
+def test_display_url_leaves_out_password_and_salt(join):
+    found = _found(salt="pepper", password="Abc123xyz")
+
+    shown = join.display_url(found, "Ann", overrides="q=2")
+    opened = join.join_url(found, "Ann", overrides="q=2")
+
+    assert "Abc123xyz" not in shown and "pepper" not in shown
+    assert "password=" not in shown and "salt=" not in shown
+    assert "Abc123xyz" in opened and "salt=pepper" in opened
+    assert shown.startswith(ORIGIN) and f"room={VDO_ROOM}" in shown and "q=2" in shown

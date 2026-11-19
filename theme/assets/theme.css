@@ -224,6 +224,21 @@ a:focus-visible,
   border: 0;
 }
 
+/* The Full link button and panel, floated over the room's bottom-left corner. */
+.iris-fulllink {
+  position: fixed;
+  left: var(--iris-space-2);
+  bottom: var(--iris-space-2);
+  z-index: 10;
+  max-width: min(var(--iris-content-width), calc(100vw - 2 * var(--iris-space-2)));
+}
+
+.iris-fulllink-panel {
+  margin-bottom: var(--iris-space-2);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 /* The rooms list on the admin page. */
 .iris-room-list {
   margin: var(--iris-space-4) 0;

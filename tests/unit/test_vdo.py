@@ -404,3 +404,84 @@ def test_build_join_url_quotes_the_label(vdo):
 def test_build_join_url_revalidates_what_it_is_given(vdo, origin, room, profile):
     with pytest.raises(ValueError):
         vdo.build_join_url(origin, room, profile, "A")
+
+
+# --- per-visit overrides ---------------------------------------------------
+
+
+def test_override_replaces_the_profiles_key_in_place_of_repeating_it(vdo):
+    merged = vdo.merge_profile("q=0&rbr=50000&crb", "q=2")
+
+    assert merged == "rbr=50000&crb&q=2"
+    assert vdo.validate_profile(merged, check_allowed=False) == merged
+
+
+def test_override_replaces_the_other_spelling_of_the_same_setting(vdo):
+    merged = vdo.merge_profile("quality=0&rbr=1", "q=2&roombitrate=200")
+
+    assert merged == "q=2&roombitrate=200"
+
+
+def test_merge_with_no_overrides_is_the_profile(vdo):
+    assert vdo.merge_profile("q=0&crb", "") == "q=0&crb"
+    assert vdo.merge_profile("", "q=2") == "q=2"
+
+
+def test_merge_refuses_a_key_that_is_not_allowed(vdo):
+    for bad in ("password=x", "room=x", "salt=x", "turn=x", "meshcast", "nosuchkey"):
+        with pytest.raises(ValueError):
+            vdo.merge_profile("q=0", bad)
+
+
+def test_parse_keeps_allowed_keys_and_lists_the_rest(vdo):
+    overrides, ignored = vdo.parse_overrides(
+        "?q=2&rbr=200&password=x&room=y&salt=s&label=l&wss=evil&turn=t&foo=1&noscale"
+    )
+
+    assert overrides == "q=2&rbr=200&noscale"
+    assert ignored == ["password", "room", "salt", "label", "wss", "turn", "foo"]
+
+
+def test_parse_decodes_the_key_before_checking_it(vdo):
+    overrides, ignored = vdo.parse_overrides("%70assword=x&%2571ualit%79=1&relay%3D1")
+
+    # An encoded allowed key is accepted under its decoded name; encoded denied
+    # keys are still refused.
+    assert overrides == "quality=1"
+    assert ignored == ["password", "relay"]
+
+
+def test_parse_ignores_a_value_with_a_character_outside_the_safe_set(vdo):
+    overrides, ignored = vdo.parse_overrides(
+        "q=2%26room%3Dx&rbr=1%23&fps=<b>&codec=h264,vp8"
+    )
+
+    assert overrides == "codec=h264,vp8"
+    assert ignored == ["q", "rbr", "fps"]
+
+
+def test_parse_keeps_the_first_of_a_repeated_setting(vdo):
+    overrides, ignored = vdo.parse_overrides("q=2&quality=1&q=0")
+
+    assert overrides == "q=2"
+    assert ignored == ["quality", "q"]
+
+
+def test_parse_of_nothing(vdo):
+    assert vdo.parse_overrides("") == ("", [])
+    assert vdo.parse_overrides(None) == ("", [])
+    assert vdo.parse_overrides("?") == ("", [])
+
+
+def test_parse_output_always_passes_the_allowlist(vdo):
+    overrides, _ = vdo.parse_overrides("ltb=300&maxbandwidth=50&tb=200&vb=500")
+
+    assert overrides == "ltb=300&tb=200&vb=500"
+    assert vdo.validate_profile(overrides) == overrides
+
+
+def test_the_notice_is_empty_or_names_a_capped_list(vdo):
+    assert vdo.override_notice([]) == ""
+    text = vdo.override_notice(["a" * 100] + [f"b{i}" for i in range(9)])
+    assert "a" * 24 in text and "a" * 25 not in text
+    assert text.endswith("and 5 more.")
