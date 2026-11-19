@@ -34,6 +34,11 @@ install, no long URL.
 
 [Empiria](https://empiria.co.uk) runs its instance at meet.empiria.co.uk.
 
+Iris is named for the Greek goddess, the messenger of the gods who carries
+words between the divine and the mortal, and whose sign is the rainbow. Empiria
+names its projects after figures from Greek mythology, and Iris seemed a good
+fit: Hermes is the messenger everyone reaches for, so we chose the other one.
+
 ## Who it is for
 
 An admin creates a link, the client opens it, and both land in a
