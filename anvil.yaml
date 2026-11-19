@@ -2,96 +2,96 @@ allow_embedding: false
 db_schema:
   room:
     client: none
-    server: full
     columns:
-    - name: slug
-      admin_ui: {width: 200, order: 0}
+    - admin_ui: {order: 0, width: 200}
+      name: slug
       type: string
-    - name: vdo_room
-      admin_ui: {width: 200, order: 1}
+    - admin_ui: {order: 1, width: 200}
+      name: vdo_room
       type: string
-    - name: title
-      admin_ui: {width: 200, order: 2}
+    - admin_ui: {order: 2, width: 200}
+      name: title
       type: string
-    - name: kind
-      admin_ui: {width: 200, order: 3}
+    - admin_ui: {order: 3, width: 200}
+      name: kind
       type: string
-    - name: active
-      admin_ui: {width: 200, order: 4}
+    - admin_ui: {order: 4, width: 200}
+      name: active
       type: bool
-    - name: created_by
-      admin_ui: {width: 200, order: 5}
+    - admin_ui: {order: 5, width: 200}
+      name: created_by
       type: string
-    - name: created
-      admin_ui: {width: 200, order: 6}
+    - admin_ui: {order: 6, width: 200}
+      name: created
       type: datetime
-    - name: verifier
-      admin_ui: {width: 200, order: 7}
+    - admin_ui: {order: 7, width: 200}
+      name: verifier
       type: string
-    - name: verifier_salt
-      admin_ui: {width: 200, order: 8}
+    - admin_ui: {order: 8, width: 200}
+      name: verifier_salt
       type: string
-    - name: kdf_iterations
-      admin_ui: {width: 200, order: 9}
+    - admin_ui: {order: 9, width: 200}
+      name: kdf_iterations
       type: number
-    - name: vdo_password
-      admin_ui: {width: 200, order: 10}
+    - admin_ui: {order: 10, width: 200}
+      name: vdo_password
       type: string
-    - name: failed_unlocks
-      admin_ui: {width: 200, order: 11}
+    - admin_ui: {order: 11, width: 200}
+      name: failed_unlocks
       type: number
-    - name: locked_until
-      admin_ui: {width: 200, order: 12}
+    - admin_ui: {order: 12, width: 200}
+      name: locked_until
       type: datetime
-    - name: updated
-      admin_ui: {width: 200, order: 13}
+    - admin_ui: {order: 13, width: 200}
+      name: updated
       type: datetime
-    - name: passphrase_sealed
-      admin_ui: {width: 200, order: 14}
+    - admin_ui: {order: 14, width: 200}
+      name: passphrase_sealed
       type: string
+    server: full
     title: room
   setting:
     client: none
-    server: full
     columns:
-    - name: key
-      admin_ui: {width: 200, order: 0}
+    - admin_ui: {order: 0, width: 200}
+      name: key
       type: string
-    - name: value
-      admin_ui: {width: 200, order: 1}
+    - admin_ui: {order: 1, width: 200}
+      name: value
       type: string
+    server: full
     title: setting
   users:
     client: none
-    server: full
     columns:
-    - name: email
-      admin_ui: {width: 200, order: 0}
+    - admin_ui: {order: 0, width: 200}
+      name: email
       type: string
-    - name: enabled
-      admin_ui: {width: 100, order: 1}
+    - admin_ui: {order: 1, width: 100}
+      name: enabled
       type: bool
-    - name: last_login
-      admin_ui: {width: 200, order: 2}
+    - admin_ui: {order: 2, width: 200}
+      name: last_login
       type: datetime
-    - name: password_hash
-      admin_ui: {width: 200, order: 3}
+    - admin_ui: {order: 3, width: 200}
+      name: password_hash
       type: string
-    - name: n_password_failures
-      admin_ui: {width: 200, order: 4}
+    - admin_ui: {order: 4, width: 200}
+      name: n_password_failures
       type: number
-    - name: confirmed_email
-      admin_ui: {width: 100, order: 5}
+    - admin_ui: {order: 5, width: 100}
+      name: confirmed_email
       type: bool
-    - name: signed_up
-      admin_ui: {width: 200, order: 6}
+    - admin_ui: {order: 6, width: 200}
+      name: signed_up
       type: datetime
-    - name: remembered_logins
-      admin_ui: {width: 200, order: 7}
+    - admin_ui: {order: 7, width: 200}
+      name: remembered_logins
       type: simpleObject
-    - name: is_admin
-      admin_ui: {width: 100, order: 8}
+    - admin_ui: {order: 8, width: 100}
+      name: is_admin
       type: bool
+    server: full
     title: Users
 dependencies:
 - dep_id: dep_kdiw29fnbu4q
@@ -107,6 +107,11 @@ runtime_options:
   server_spec: {base: python310-minimal}
   server_version: python3-full
   version: 3
+secrets:
+  iris_passphrase_key:
+    type: secret
+    value:
+      5AK5WZ564TWNEENT: {? '' : eUNFhIHZMzkDTWoSKQwZjq+AZn1LhfrjHpBAL2iFF/Fvp8evHJhA59LsICDLEe6qw5+00y51xxjegPYbPLhhlJJXB66zbXtmtOp25aBqoUvK/Kz8Tntn6Odc49796BCZ7b4WZcIEQBbUrYGMo56jKdpr3bcHW0CTJkNdJY6WNHVFHUQWP/UNBjs4toPw6ovWZtXSQutxYonnrDyf}
 services:
 - client_config: {enable_v2: true}
   server_config: {}
@@ -114,20 +119,7 @@ services:
 - client_config: {}
   server_config: {}
   source: /runtime/services/anvil/secrets.yml
-- client_config:
-    allow_signup: false
-    confirm_email: false
-    enable_automatically: true
-    use_email: true
-    allow_remember_me: true
-    remember_me_days: 7
-    require_secure_passwords: true
-    share_login_status: false
-    use_token: false
-    use_google: false
-    use_facebook: false
-    use_microsoft: false
-    use_saml: false
+- client_config: {allow_remember_me: true, allow_signup: false, confirm_email: false, enable_automatically: true, remember_me_days: 7, require_secure_passwords: true, share_login_status: false, use_email: true, use_facebook: false, use_google: false, use_microsoft: false, use_saml: false, use_token: false}
   server_config: {user_table: users}
   source: /runtime/services/anvil/users.yml
 startup: {module: startup, type: module}

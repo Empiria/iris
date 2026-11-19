@@ -1,24 +1,24 @@
 ---
 custom_component: true
 properties:
-  - name: label
-    type: string
-    default_value: ""
-  - name: input_type
-    type: string
-    default_value: text
-  - name: autocomplete
-    type: string
-    default_value: "off"
-  - name: maxlength
-    type: number
-    default_value: 0
-  - name: readonly
-    type: boolean
-    default_value: false
-  - name: private
-    type: boolean
-    default_value: false
+- default_value: ''
+  name: label
+  type: string
+- default_value: text
+  name: input_type
+  type: string
+- default_value: 'off'
+  name: autocomplete
+  type: string
+- default_value: 0
+  name: maxlength
+  type: number
+- default_value: false
+  name: readonly
+  type: boolean
+- default_value: false
+  name: private
+  type: boolean
 ---
 <label class="iris-field"><span anvil:dom-node="label"></span>
   <input class="iris-input" type="text" anvil:dom-node="input">
