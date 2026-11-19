@@ -7,6 +7,7 @@ from anvil_reactive.main import render_effect, signal
 from iris.services import (
     clipboard,  # pyright: ignore[reportAttributeAccessIssue]
     links,  # pyright: ignore[reportAttributeAccessIssue]
+    rooms_state,  # pyright: ignore[reportAttributeAccessIssue]
 )
 
 from ._anvil_designer import RoomRowTemplate
@@ -113,6 +114,7 @@ class RoomRow(RoomRowTemplate):
             "Created " + created if created else ""
         )
         self.dom_nodes["rotate_button"].hidden = not permanent
+        self.dom_nodes["reveal_button"].hidden = not permanent
 
     def _tell_parent(self, name, **event_args):
         """Raise an event on the panel that holds this row, if it has one."""
@@ -131,6 +133,25 @@ class RoomRow(RoomRowTemplate):
             self._show_message(
                 "Copy failed. Select the link and press Ctrl+C or Cmd+C."
             )
+
+    def _on_reveal(self, event, **properties):
+        self._show_message("")
+        status, text = rooms_state.reveal_passphrase(self._slug())
+        if status != "ok":
+            # A room with no stored passphrase, or a failure: the message says
+            # which, and for the first it points at Rotate.
+            self._show_message(text)
+            return
+        self.reveal_field.value = text
+        self.dom_nodes["reveal_box"].hidden = False
+        self.dom_nodes["reveal_button"].hidden = True
+        self.dom_nodes["hide_button"].focus()
+
+    def _on_hide(self, event, **properties):
+        self.reveal_field.clear()
+        self.dom_nodes["reveal_box"].hidden = True
+        self.dom_nodes["reveal_button"].hidden = False
+        self.dom_nodes["reveal_button"].focus()
 
     def _on_edit(self, event, **properties):
         self._show_message("")

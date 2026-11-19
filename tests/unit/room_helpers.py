@@ -22,6 +22,7 @@ PERMANENT_COLUMNS = (
     "failed_unlocks",
     "locked_until",
     "updated",
+    "passphrase_sealed",
 )
 
 

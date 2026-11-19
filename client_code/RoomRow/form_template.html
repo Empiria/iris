@@ -13,6 +13,8 @@ custom_component: true
             anvil:on-dom:click="self._on_copy">Copy link</button>
     <button type="button" class="iris-button" anvil:dom-node="edit_button"
             anvil:on-dom:click="self._on_edit">Edit title</button>
+    <button type="button" class="iris-button" anvil:dom-node="reveal_button"
+            anvil:on-dom:click="self._on_reveal">Show passphrase</button>
     <button type="button" class="iris-button" anvil:dom-node="rotate_button"
             anvil:on-dom:click="self._on_rotate">Rotate passphrase</button>
     <button type="button" class="iris-button" anvil:dom-node="delete_button"
@@ -26,6 +28,14 @@ custom_component: true
             anvil:on-dom:click="self._on_save">Save title</button>
     <button type="button" class="iris-button" anvil:dom-node="cancel_edit_button"
             anvil:on-dom:click="self._on_cancel">Cancel</button>
+  </div>
+  <div class="iris-room-reveal" anvil:dom-node="reveal_box" hidden>
+    <anvil-component name="reveal_field" type="form:CopyField"
+                     prop:label="Join phrase" prop:secret="true"
+                     prop:button_text="Copy phrase"
+                     prop:copied_text="Phrase copied."></anvil-component>
+    <button type="button" class="iris-button" anvil:dom-node="hide_button"
+            anvil:on-dom:click="self._on_hide">Hide passphrase</button>
   </div>
   <anvil-component name="confirm_bar" type="form:ConfirmBar"></anvil-component>
   <anvil-component name="row_message" type="form:Message"></anvil-component>

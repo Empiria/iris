@@ -156,6 +156,9 @@ up: (_need-podman "up")
         # Loopback only: the dev uplink key must not be reachable from the network.
         # The --dep-id flags come from anvil.yaml, so ids are never typed twice.
         # After a package_name or dep_id change in anvil.yaml, run `just fresh`.
+        # --encryption-key is the local-only dev value (16 bytes, base64) for the
+        # passphrase-reveal key. Changing it or the name makes stored passphrases
+        # unreadable, so `just fresh`. Production's key is made in the Anvil IDE.
         [ -n "{{ package }}" ] || { echo "up: no package_name in anvil.yaml"; exit 1; }
         # No fixed port: other checkouts and projects run stacks too. Pick a free one
         # here, because the app's --origin must name the port the browser will use.
@@ -166,6 +169,7 @@ up: (_need-podman "up")
         podman run -d --name {{ ctr }} -p "127.0.0.1:$port:3030" \
             -v "{{ justfile_directory() }}:/srv/{{ package }}:ro,z" -v {{ vol }}:/data \
             {{ img }} --app /srv/{{ package }} --origin "http://localhost:$port" --port 3030 \
+            --encryption-key iris_passphrase_key=aXJpcy1kZXYta2V5LTAwMQ== \
             $(uv run --script tools/anvil_deps.py --dep-id-args)
     fi
     # Ask the container which host port it is on, so the file always matches it.

@@ -46,6 +46,9 @@ db_schema:
     - name: updated
       admin_ui: {width: 200, order: 13}
       type: datetime
+    - name: passphrase_sealed
+      admin_ui: {width: 200, order: 14}
+      type: string
     title: room
   setting:
     client: none

@@ -122,3 +122,18 @@ def rotate_passphrase(slug):
     if not isinstance(slug, str):
         raise ValueError("No such room.")
     return Room.rotate(slug)
+
+
+@anvil.server.callable(require_user=permissions.is_admin)
+def reveal_room_passphrase(slug):
+    """Show a permanent room's passphrase again. Admins only.
+
+    The runtime enforces `require_user`, and `Room.reveal_passphrase` repeats the
+    check. The reply is {"status": "ok", "passphrase": ...}, or {"status":
+    "none"} for a room made before passphrases were stored. A missing or wrong
+    encryption key raises a VaultError with a message for the admin. The
+    passphrase never goes to anyone who is not a signed-in admin.
+    """
+    if not isinstance(slug, str):
+        raise ValueError("No such room.")
+    return Room.reveal_passphrase(slug)

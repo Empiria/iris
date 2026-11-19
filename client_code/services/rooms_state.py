@@ -23,6 +23,11 @@ from iris.services import (
 
 # The wording the page already uses when a call is refused.
 SIGNED_OUT_TEXT = "You are not signed in as admin."
+# For a room made before passphrases were stored: only a rotation can fix it.
+NO_STORED_PASSPHRASE_TEXT = (
+    "This room was made before passphrases were kept, so it can't be shown."
+    " Rotate the passphrase to get a new one."
+)
 
 
 class _State:
@@ -165,3 +170,19 @@ def rotate_passphrase(slug):
         "New passphrase for " + str(reply["slug"]) + " is in the box above."
     )
     load_rooms()
+
+
+def reveal_passphrase(slug):
+    """Ask the server for a permanent room's passphrase. Returns (status, text).
+
+    The status is "ok" with the passphrase, "none" for a room made before
+    passphrases were stored, or "error" with the text to show. The passphrase is
+    handed to the caller and kept nowhere here.
+    """
+    try:
+        reply = anvil.server.call("reveal_room_passphrase", slug)
+    except Exception as error:
+        return "error", _failure(error, "Could not show the passphrase. Try again.")
+    if reply["status"] == "ok":
+        return "ok", str(reply["passphrase"])
+    return "none", NO_STORED_PASSPHRASE_TEXT

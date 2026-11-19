@@ -113,7 +113,41 @@ def _get_user(*_args, **_kwargs):
     return _CURRENT["user"]
 
 
+class SecretError(Exception):
+    """Stands in for anvil.secrets.SecretError."""
+
+
+def _make_secrets_stub():
+    """A reversible stand-in for `anvil.secrets` encryption with named keys.
+
+    `KEYS` holds the key names that exist. The "ciphertext" is the key name and
+    the text reversed, so a test can tell it from the plaintext and a wrong key
+    fails to decrypt, as the real one does.
+    """
+    secrets = types.ModuleType("anvil.secrets")
+    secrets.KEYS = {"iris_passphrase_key"}
+    secrets.SecretError = SecretError
+
+    def encrypt_with_key(key_name, value):
+        if key_name not in secrets.KEYS:
+            raise SecretError("No such encryption key '" + key_name + "'")
+        return "enc:" + key_name + ":" + value[::-1]
+
+    def decrypt_with_key(key_name, value):
+        if key_name not in secrets.KEYS:
+            raise SecretError("No such encryption key '" + key_name + "'")
+        prefix = "enc:" + key_name + ":"
+        if not value.startswith(prefix):
+            raise SecretError("Could not decrypt")
+        return value[len(prefix) :][::-1]
+
+    secrets.encrypt_with_key = encrypt_with_key
+    secrets.decrypt_with_key = decrypt_with_key
+    return secrets
+
+
 def _install_anvil_stubs():
+    secrets = _make_secrets_stub()
     anvil = types.ModuleType("anvil")
     server = types.ModuleType("anvil.server")
     tables = types.ModuleType("anvil.tables")
@@ -136,6 +170,8 @@ def _install_anvil_stubs():
     anvil.server = server
     anvil.tables = tables
     anvil.users = users
+    anvil.secrets = secrets
+    sys.modules["anvil.secrets"] = secrets
     sys.modules["anvil"] = anvil
     sys.modules["anvil.server"] = server
     sys.modules["anvil.tables"] = tables
@@ -245,6 +281,19 @@ def Room(load_client_module):  # noqa: N802
 @pytest.fixture
 def slugs(load_client_module):
     return load_client_module("services/slugs")
+
+
+@pytest.fixture
+def secret_keys():
+    """The set of encryption key names the stubbed `anvil.secrets` knows.
+
+    Restored after the test. Empty it to play a missing key.
+    """
+    keys = sys.modules["anvil.secrets"].KEYS
+    saved = set(keys)
+    yield keys
+    keys.clear()
+    keys.update(saved)
 
 
 @pytest.fixture

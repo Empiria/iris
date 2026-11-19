@@ -34,6 +34,15 @@ def _verifier():
     return __import__("iris.verifier", fromlist=["verifier"])
 
 
+def _vault():
+    """The server-only `vault` module, loaded by name when first needed.
+
+    It seals and unseals room passphrases. Same reasons as `_verifier`. Only an
+    admin-checked method may call `vault.unseal`.
+    """
+    return __import__("iris.vault", fromlist=["vault"])
+
+
 def _in_transaction():
     """`anvil.tables.in_transaction`, loaded when first needed (server only)."""
     return __import__("anvil.tables", fromlist=["tables"]).in_transaction
@@ -257,8 +266,9 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         """Create a permanent room. Admins only.
 
         Returns the slug, the title and the generated passphrase. The passphrase
-        is returned this once: only its slow hash is stored, so nothing here can
-        show it again. Raises ValueError (slug rules, or "That name is taken.").
+        is stored as its slow hash and, encrypted with the app's key, so an
+        admin can reveal it later (`reveal_passphrase`). Raises ValueError (slug
+        rules, or "That name is taken.") or VaultError (no usable key).
         """
         user = permissions.require_admin()
         slug = slugs.clean_room_slug(slug_text)
@@ -270,6 +280,9 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
             raise ValueError("That name is taken.")
         phrase = passphrase.generate()
         record = _verifier().hash_passphrase(passphrase.normalise(phrase))
+        # Sealed before the row exists: a missing key refuses the creation,
+        # rather than leaving a room whose passphrase nobody can read again.
+        sealed = _vault().seal(phrase)
         now = _now()
         row = app_tables.room.add_row(
             slug=slug,
@@ -283,6 +296,7 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
             verifier=record["verifier"],
             verifier_salt=record["verifier_salt"],
             kdf_iterations=record["kdf_iterations"],
+            passphrase_sealed=sealed,
             vdo_password=slugs.random_string(vdo.HEX_LOWER, _VDO_PASSWORD_LENGTH),
             failed_unlocks=0,
             locked_until=None,  # pyright: ignore[reportArgumentType]
@@ -380,7 +394,8 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
 
         The vdo room and vdo password are replaced too, so a person holding the
         old details is out of the room, and any lock is cleared. The new
-        passphrase is returned this once; only its slow hash is stored.
+        passphrase is returned, and stored encrypted for `reveal_passphrase`
+        beside its slow hash. Raises VaultError when there is no usable key.
         """
         permissions.require_admin()
         row = _find_room(slug)
@@ -388,7 +403,9 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
             raise ValueError("Only permanent rooms have a passphrase.")
         phrase = passphrase.generate()
         record = _verifier().hash_passphrase(passphrase.normalise(phrase))
+        sealed = _vault().seal(phrase)
         row.update(
+            passphrase_sealed=sealed,
             verifier=record["verifier"],
             verifier_salt=record["verifier_salt"],
             kdf_iterations=record["kdf_iterations"],
@@ -400,3 +417,24 @@ class Room(app_tables.room.Row, buffered=True, attrs=True):
         )
         row.save()
         return {"slug": row["slug"], "passphrase": phrase}
+
+    @anvil.server.server_method
+    @classmethod
+    def reveal_passphrase(cls, slug):
+        """A permanent room's passphrase, decrypted. Admins only.
+
+        {"status": "ok", "passphrase": ...} for a room that stored one, and
+        {"status": "none"} for a room made before passphrases were stored, which
+        only a rotation can fix. A one-off or unknown room raises ValueError.
+        A missing key or an undecryptable value raises VaultError, whose
+        message is safe to show. The admin check comes first, so a caller who
+        is not an admin gets nothing, not even whether the room exists.
+        """
+        permissions.require_admin()
+        row = _find_room(slug)
+        if row["kind"] != "permanent":
+            raise ValueError("Only permanent rooms have a passphrase.")
+        sealed = row["passphrase_sealed"]
+        if not sealed:
+            return {"status": "none"}
+        return {"status": "ok", "passphrase": _vault().unseal(sealed)}
