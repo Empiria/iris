@@ -6,7 +6,7 @@
 Iris is built on the work of others. Thank you to everyone below.
 
 - **[VDO.Ninja](https://vdo.ninja)** by Steve Seguin. The peer-to-peer video
-  rooms that Iris gives short links to. VDO.Ninja is licensed under AGPL-3.0.
+  rooms that Iris gives short links to. VDO.Ninja is licensed under AGPL-3.0-only.
   Iris links to VDO.Ninja and does not distribute its code.
 - **[Anvil](https://anvil.works)**. The platform Iris is built on, and the
   [open-source app server](https://github.com/anvil-works/anvil-runtime) used

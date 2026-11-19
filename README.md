@@ -46,15 +46,15 @@ never sees the query string.
 
 Admins open the app root (`/`; `/admin` is an alias, and the older `/staff`
 still works for existing bookmarks) and sign in with an email and password. A
-**Forgot password?** link on the sign-in form emails a reset link that expires
-in ten minutes (the Anvil Users service sends it, so the deployment needs
-working email). Sign-up is off: admin accounts are created by a deployer (see
+**Forgot password?** link on the sign-in form emails a reset link (the Anvil
+Users service sends it, so the deployment needs working email). Sign-up is off: admin accounts are created by a deployer (see
 [Install](#install)). A signed-in admin can:
 
 - create a one-off link with an optional title. The link is copied to the
   clipboard, and can be copied again from the page;
 - create a permanent room with a readable name;
-- rename, delete or rotate the passphrase of any room from the room list;
+- rename, delete or rotate the passphrase of any room from the room list, and
+  reveal a permanent room's current passphrase (see below);
 - edit the call settings (see [below](#the-call-settings-profile)).
 
 Each one-off link is a recorded `room` row with its own slug and a separate
@@ -64,10 +64,20 @@ someone inventing a slug and reaching a room. It also means a link can be
 revoked (set the row inactive) and its creator is recorded.
 
 A permanent room has a name you choose as its address and a generated
-passphrase, shown once when the room is created or the passphrase is rotated.
-Only a slow salted hash of the passphrase is stored. Guests enter the
-passphrase to join, and repeated wrong guesses lock the room's unlock for a few
-minutes.
+passphrase, shown when the room is created or the passphrase is rotated. Guests
+are checked against a salted PBKDF2-HMAC-SHA256 hash (600,000 iterations) of it.
+Ten wrong guesses lock that room's unlock for five minutes.
+
+Admins can also reveal a room's passphrase later. For that, the passphrase is
+stored encrypted with an Anvil Encryption Key secret named `iris_passphrase_key`
+(the `passphrase_sealed` column of the `room` table), and only an admin's
+request ever decrypts it. A deployment must create that key (see
+[Install](#install)). Rooms made before this existed have nothing stored to
+reveal: rotate their passphrase and the new one can be revealed.
+
+The admin and join pages are assembled from small reusable components (`Message`,
+`TextField`, `CopyField`, `StatusCard`, `ConfirmBar`, `SignInCard`,
+`CreateMeeting`, `RoomsList` and `CallSettings`) in `client_code/`.
 
 ### Clients
 
@@ -156,16 +166,22 @@ documented steps and has not been re-run for this README.
    apply it, so resolve it once per
    [environment](https://anvil.works/docs/deployment/environments).
 4. **Set the [secrets](https://anvil.works/docs/workflows/security/encrypting-secret-data).**
-   Secret values can't be copied between apps, so re-enter them. Iris needs
-   `iris_admin_email` and optionally `iris_admin_password`. The earlier names
-   `iris_staff_email` and `iris_staff_password` are still read as a fallback.
+   Secret values can't be copied between apps, so re-enter them. Iris needs:
+   - `iris_passphrase_key`, an **Encryption Key** secret (not a plain text
+     secret), which seals permanent-room passphrases so admins can reveal them.
+     Create your own: never reuse another deployment's key.
+   - `iris_admin_email` and optionally `iris_admin_password`, for the next step.
+     The earlier names `iris_staff_email` and `iris_staff_password` are still
+     read as a fallback.
 5. **Create the first admin user.** Sign-up is off, so
    `scripts/CreateAdmin.py` is the only way the first account comes to exist,
    and it refuses to run once an admin user exists. Press Run on `CreateAdmin` in
-   the editor, then delete the password secret. Passwords must meet the Users service's secure-password rule (at least 8
-   characters). Choose your own with the `iris_admin_password` secret, which is
-   never printed. With no password set, a random one is printed once on a line
-   `generated password: ...`, so store it in a password manager. (Once email works, **Forgot password?** sets a new one.)
+   the editor, then delete the password secret. A password must be at least 8
+   characters and meet the Users service's secure-password rule. Choose your own
+   with the `iris_admin_password` secret, which is never printed. With no
+   password set, a random one is printed once on a line
+   `generated password: ...`, so store it in a password manager. (Once email
+   works, **Forgot password?** sets a new one.)
 6. **Set the profile:** use the Call settings card on the admin page (and, for
    your own VDO.Ninja, add a `vdo_origin` row to the `setting` table).
 7. **Add a [custom domain](https://anvil.works/docs/deployment/custom-domains)**,
@@ -193,7 +209,8 @@ pinned in `anvil.yaml` (no login) and builds an image with `anvil-app-server`
   Tables schema from `anvil.yaml`, so there is no resolve step.
 - `--origin http://localhost:<port> --port 3030`: the origin must be the URL the
   browser uses.
-- `--uplink-key`, a fixed development value.
+- `--uplink-key` and `--encryption-key iris_passphrase_key=...`, fixed
+  development values (the Encryption Key that `iris_passphrase_key` names).
 
 Packages in `server_code/requirements.txt` are installed into the image. Create
 the first admin with `just create-admin you@example.com` (or `--dev`), which
@@ -214,8 +231,11 @@ the local stack, so treat the following as a starting point:
   honours `IRIS_UPLINK_URL` and `IRIS_UPLINK_KEY`, but only for a `ws://` URL on
   localhost, so run it on the server or through an SSH tunnel. Untested against
   a non-development server.
-- Iris reads secrets only in `CreateAdmin`, which falls back to the environment,
-  so no secrets are needed to start.
+- Permanent rooms need an Encryption Key named `iris_passphrase_key`. Pass your
+  own with anvil-app-server's `--encryption-key iris_passphrase_key=<key>` and
+  keep it safe: without the same key, stored passphrases can't be revealed.
+  Everything else works without secrets, because `CreateAdmin` falls back to
+  the environment.
 
 ## Local development
 
@@ -237,7 +257,7 @@ The local stack runs the app in the open-source anvil-app-server:
 just build     # build the app-server image
 just up        # start the stack
 just seed      # seed dev accounts and a known meeting over the dev uplink
-just e2e       # browser tests (pytest-playwright) against the running stack
+just e2e       # browser tests, including an axe accessibility check, against the stack
 just down      # stop it; `just fresh` starts again with an empty database
 ```
 
@@ -258,11 +278,14 @@ machine rather than in CI.
 ## Project layout
 
 - `anvil.yaml`: app config, dependencies, services and the Data Tables schema
-- `client_code/`: forms (`Admin`, `ForgotPassword`, `Join`, `MeetingFrame`,
-  `RoomRow`), the routes and `services/` (hand-off, VDO.Ninja URL rules, slugs,
-  passphrases, models). Client code runs on Skulpt, and is imported as `iris.*`
+- `client_code/`: the pages (`Admin`, `Join`), reusable components (`Message`,
+  `TextField`, `CopyField`, `StatusCard`, `ConfirmBar`, `SignInCard`,
+  `CreateMeeting`, `RoomsList`, `RoomRow`, `CallSettings`, `ForgotPassword`,
+  `MeetingFrame`), the routes and `services/` (hand-off, VDO.Ninja URL rules,
+  slugs, passphrases, models). Client code runs on Skulpt, and is imported as
+  `iris.*`
 - `server_code/`: server modules (`meetings.py`, `admin_settings.py`,
-  `auth.py`, `verifier.py`, `health.py`)
+  `auth.py`, `verifier.py`, `vault.py`, `health.py`)
 - `scripts/CreateAdmin.py`: creates the first admin user
 - `theme/`: colour parameters and `assets/theme.css`, which holds all styling
 - `tools/`: dependency fetch, local seeding, the leftovers and SPDX checks and
@@ -277,7 +300,8 @@ machine rather than in CI.
 ## Status and known limits
 
 **Built:** admin sign-in with a password reset by email, one-off links,
-permanent named rooms with a passphrase (create, rename, delete, rotate), the
+permanent named rooms with a passphrase (create, rename, delete, rotate,
+reveal), the
 client join page, the iframe and redirect hand-off, and the call-settings
 profile with its admin editor.
 
@@ -294,7 +318,9 @@ waiting room.
   tried.
 - Safari on iOS and in-app browsers are redirected rather than embedded, because
   the iframe behaviour there has not been tested.
-- `vdo_origin` and `vdo_salt` have no editor: set them as `setting` rows in the
+- Permanent rooms made before passphrase reveal existed can only have their
+  passphrase rotated, not revealed.
+- `vdo_origin`, `vdo_salt` and `vdo_profile_extra_keys` have no editor: set them as `setting` rows in the
   Data Tables editor.
 - Iris is MIT-licensed. See [Licence](#licence).
 
@@ -307,12 +333,12 @@ Every tracked file carries an `SPDX-License-Identifier: MIT` and `Copyright (c)
 rewrites, are covered by [`REUSE.toml`](REUSE.toml) following the
 [REUSE](https://reuse.software) specification. `just spdx` checks both.
 
-VDO.Ninja is a separate project by Steve Seguin, licensed under AGPL-3.0. Iris
+VDO.Ninja is a separate project by Steve Seguin, licensed under AGPL-3.0-only. Iris
 links to VDO.Ninja and does not distribute its code.
 
 ## Credits
 
-Iris is powered by [VDO.Ninja](https://vdo.ninja) by Steve Seguin (AGPL-3.0)
+Iris is powered by [VDO.Ninja](https://vdo.ninja) by Steve Seguin (AGPL-3.0-only)
 and built on [Anvil](https://anvil.works), with the
 [routing](https://github.com/anvil-works/routing) (MIT) and
 [anvil-reactive](https://github.com/anvilistas/reactive) (MIT) dependencies.
