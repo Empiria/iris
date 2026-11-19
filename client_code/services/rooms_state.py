@@ -166,10 +166,14 @@ def rotate_passphrase(slug):
         return
     # The new passphrase shows in the same box a new room's passphrase uses.
     state.result = {"slug": reply["slug"], "passphrase": str(reply["passphrase"])}
-    state.rooms_message = (
-        "New passphrase for " + str(reply["slug"]) + " is in the box above."
-    )
+    # Load first, announce after: the announcement is what a person (or a test)
+    # waits for before using the rows, so it must not appear while the rows are
+    # still the old ones, about to be replaced. A failed reload keeps its own text.
     load_rooms()
+    if state.rooms_message == "":
+        state.rooms_message = (
+            "New passphrase for " + str(reply["slug"]) + " is in the box above."
+        )
 
 
 def reveal_passphrase(slug):

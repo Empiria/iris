@@ -224,6 +224,10 @@ create-admin *args: _need-stack
 e2e: _need-stack
     uv run pytest tests/e2e
 
+# [host] One browser test against the running stack: `just e2e-one tests/e2e/test_x.py::test_y`.
+e2e-one test: _need-stack
+    uv run pytest {{ test }}
+
 # [host] Run every host-only check in order, stop at the first failure, log to .anvil/host-check.txt, leave the stack up.
 host-check: (_need-podman "host-check")
     #!/usr/bin/env bash
